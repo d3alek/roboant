@@ -154,7 +154,7 @@ camera.startPreview();
         return opts;
     }
 
-    public static Bitmap getCroppedBitmap(Bitmap bitmap) {
+    public static Bitmap getCroppedBitmap(Bitmap bitmap, float centerXRatio, float centerYRatio, float cropRadiusRatio) {
         Bitmap output = Bitmap.createBitmap(bitmap.getWidth(),
                 bitmap.getHeight(), Config.ARGB_8888);
         Canvas canvas = new Canvas(output);
@@ -167,8 +167,12 @@ camera.startPreview();
         canvas.drawARGB(0, 0, 0, 0);
         paint.setColor(color);
         // canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
-        canvas.drawCircle(bitmap.getWidth() / 2, bitmap.getHeight() / 2,
-                bitmap.getWidth() / 2, paint);
+        Log.i(TAG, "Draw circle is " + centerXRatio + " " + centerYRatio + " " + cropRadiusRatio + " Image size is " + bitmap.getWidth() + " " + bitmap.getHeight());
+        float centerX = (1 - centerYRatio) * rect.width();
+        float centerY = centerXRatio * rect.height();
+        float radius = cropRadiusRatio * rect.height();
+        canvas.drawCircle(centerX, centerY,
+        		radius, paint);
         paint.setXfermode(new PorterDuffXfermode(Mode.SRC_IN));
         canvas.drawBitmap(bitmap, rect, rect, paint);
         //Bitmap _bmp = Bitmap.createScaledBitmap(output, 60, 60, false);

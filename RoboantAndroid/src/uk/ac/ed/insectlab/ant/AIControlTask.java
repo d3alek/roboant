@@ -236,7 +236,8 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
     private Bitmap makeBitmap(byte[] rawJPEG) {
         Bitmap bmp =  BitmapFactory.decodeByteArray(rawJPEG, 0, rawJPEG.length, Util.getRouteFollowingBitmapOpts());
-        Bitmap cropped = Util.getCroppedBitmap(bmp);
+        Bitmap cropped = Util.getCroppedBitmap(bmp, mCameraControl.getCameraXRatio(),
+        		mCameraControl.getCameraYRatio(), mCameraControl.getRadiusRatio());
         bmp.recycle();
         return cropped;
     }

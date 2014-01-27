@@ -159,7 +159,8 @@ private static final String TAG = "TcpClient";
  
         } catch (Exception e) {
  
-            Log.e("TCP", "C: Error", e);
+//            Log.e("TCP", "C: Error", e);
+        	Log.e("TCP", "Connection error");
             if (!mStopped) {
                 mMessageListener.disconnected();
             }

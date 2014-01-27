@@ -3,8 +3,10 @@ package uk.ac.ed.insectlab.ant;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
+import android.graphics.PorterDuff;
 import android.graphics.RectF;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
@@ -13,6 +15,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
+import android.view.GestureDetector;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -30,7 +35,7 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
         private Handler mHandler;
         private Context mContext;
         private ShapeDrawable mPanoramicCircle;
-        private Paint mLinePaint;
+        private Paint mGreenPaint;
         private int mCanvasWidth = 0;
         private int mCanvasHeight = 0;
         private long mLastTime;
@@ -40,6 +45,7 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
         private boolean mRun = false;
 
         private final Object mRunLock = new Object();
+		private Paint mOrangePaint;
 
         public CameraThread(SurfaceHolder surfaceHolder, Context context,
                 Handler handler) {
@@ -58,9 +64,12 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
 //                    R.drawable.lander_crashed);
 
             // Initialize paints for speedometer
-            mLinePaint = new Paint();
-            mLinePaint.setAntiAlias(true);
-            mLinePaint.setARGB(255, 0, 255, 0);
+            mGreenPaint = new Paint();
+            mGreenPaint.setAntiAlias(true);
+            mGreenPaint.setARGB(100, 0, 255, 0);
+            mOrangePaint = new Paint();
+            mOrangePaint.setAntiAlias(true);
+            mOrangePaint.setARGB(50, 255, 165, 0);
 
 //            mScratchRect = new RectF(0, 0, 0, 0);
 
@@ -260,15 +269,48 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
          * Canvas.
          */
         private void doDraw(Canvas canvas) {
-            mPanoramicCircle.draw(canvas);
-//            mPanoramicCircle.
-            canvas.drawOval(new RectF(100, 100, 600, 600), mLinePaint);
+        	canvas.drawColor(0, PorterDuff.Mode.CLEAR);
+
+        	if (mTouchDown) {
+	            float left = mCameraX - mTouchRadius;
+	            float right = mCameraX + mTouchRadius;
+	            float top = mCameraY - mTouchRadius;
+	            float bottom = mCameraY + mTouchRadius;
+	            canvas.drawOval(new RectF(left, top, right, bottom), mGreenPaint);
+	            mTouchRadius += 1;
+        	}
+        	
+        	else {
+        		float left = mCameraX - mCameraRadius;
+	            float right = mCameraX + mCameraRadius;
+	            float top = mCameraY - mCameraRadius;
+	            float bottom = mCameraY + mCameraRadius;
+	            canvas.drawOval(new RectF(left, top, right, bottom), mOrangePaint);
+        	}
         }
     }
 
     protected static final String TAG = "CameraOverlay";
 
     private CameraThread thread;
+
+	private GestureDetector mGestureDetector;
+
+	private boolean mTouchDown;
+
+	private int mTouchRadius;
+
+	private float mCameraX;
+
+	private float mCameraY;
+
+	private int mCameraRadius;
+
+	private float mCameraXRatio;
+
+	private float mCameraYRatio;
+
+	private float mRadiusRatio;
 
 
     public CameraOverlay(Context context, AttributeSet attrs) {
@@ -288,8 +330,40 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
                 Log.i(TAG, "Message " + m);
             }
         });
+        
+        setFocusable(true);
+        
+        mGestureDetector = new GestureDetector(context, new GestureListener());
     }
 
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+//    	mGestureDetector.onTouchEvent(event);
+    	
+    	switch (event.getAction()) {
+		case MotionEvent.ACTION_DOWN:
+			Log.i(TAG, "ACTION_DOWN");
+			mTouchRadius = 0;
+			mTouchDown = true;
+			mCameraX = event.getX();
+			mCameraY = event.getY();
+			break;
+		case MotionEvent.ACTION_UP:
+			Log.i(TAG, "ACTION_UP");
+			mTouchDown = false;
+			mCameraRadius = mTouchRadius;
+			mCameraXRatio = mCameraX/getWidth();
+			mCameraYRatio = mCameraY/getHeight();
+			mRadiusRatio = (float)(mCameraRadius)/getWidth();
+			break;
+//		default:
+//			Log.i(TAG, "Unrecognized action " + event.getAction());
+//			break;
+		}
+    	
+    	return true;
+    }
+    
     @Override
     public void onWindowFocusChanged(boolean hasWindowFocus) {
         if (!hasWindowFocus) thread.pause();
@@ -330,4 +404,36 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
             }
         }
     }
+
+	public float getCameraX() {
+		return mCameraXRatio;
+	}
+
+	public float getCameraY() {
+		return mCameraYRatio;
+	}
+
+	public float getRadius() {
+		return mRadiusRatio;
+	}
+	
+	private class GestureListener extends GestureDetector.SimpleOnGestureListener {
+//		@Override
+//		public boolean onDown(MotionEvent e) {
+//			Log.i(TAG, "onDown");
+//			return super.onDown(e);
+//		}
+//		
+//		@Override
+//		public void onShowPress(MotionEvent e) {
+//			Log.i(TAG, "onShowPress");
+//			super.onShowPress(e);
+//		}
+//		
+//		@Override
+//		public boolean onSingleTapUp(MotionEvent e) {
+//			Log.i(TAG, "onSingleTapUp");
+//			return super.onSingleTapUp(e);
+//		}
+	}
 }
