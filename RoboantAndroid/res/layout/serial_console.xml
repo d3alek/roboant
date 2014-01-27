@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent" >
+    
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_centerInParent="true" >
+
+        <FrameLayout
+            android:id="@+id/camera_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+        <Button 
+            android:id="@+id/btn_record"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            android:text="Record"/>
+    </RelativeLayout>
+
+    <!-- <TextView -->
+    <!-- android:id="@+id/demoTitle" -->
+    <!-- android:layout_width="match_parent" -->
+    <!-- android:layout_height="wrap_content" -->
+    <!-- android:layout_alignParentTop="true" -->
+    <!-- android:text="@string/app_title" -->
+    <!-- android:textSize="24sp" -->
+    <!-- android:textStyle="bold" /> -->
+
+
+    <!-- <View -->
+    <!-- android:id="@+id/separator" -->
+    <!-- android:layout_width="match_parent" -->
+    <!-- android:layout_below="@+id/demoTitle" -->
+    <!-- android:layout_height="1dip" -->
+    <!-- android:background="#eeeeee" /> 0 -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/serverInfo"
+        android:layout_alignParentTop="true" >
+
+        <EditText
+            android:id="@+id/serverIP"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="3"
+            android:hint="Server IP" />
+
+        <EditText
+            android:id="@+id/serverPort"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Port" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/leftLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/serverInfo"
+        android:text="Left" />
+
+    <RelativeLayout
+        android:id="@+id/leftSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/leftLabel"
+        android:orientation="horizontal" >
+
+        <EditText
+            android:id="@+id/leftValue"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:inputType="numberSigned" />
+
+        <SeekBar
+            android:id="@+id/left"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/leftValue"
+            android:max="400" />
+    </RelativeLayout>
+
+    <TextView
+        android:id="@+id/rightLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Right"
+        android:layout_below="@+id/leftSlider" />
+
+    <RelativeLayout
+        android:id="@+id/rightSlider"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_below="@+id/rightLabel" >
+
+        <EditText
+            android:id="@+id/rightValue"
+            android:layout_width="80dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:inputType="numberSigned" />
+
+        <SeekBar
+            android:id="@+id/right"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/rightValue"
+            android:max="400" />
+    </RelativeLayout>
+    
+    
+
+<!--     <ScrollView -->
+<!--         android:id="@+id/demoScroller" -->
+<!--         android:layout_width="match_parent" -->
+<!--         android:layout_height="wrap_content" -->
+<!--         android:layout_below="@+id/rightSlider" > -->
+
+<!--         <TextView -->
+<!--             android:id="@+id/consoleText" -->
+<!--             android:layout_width="match_parent" -->
+<!--             android:layout_height="wrap_content" -->
+<!--             android:textIsSelectable="true" -->
+<!--             android:typeface="monospace" /> -->
+<!--     </ScrollView> -->
+
+    <EditText
+        android:id="@+id/input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/motor_test" />
+
+    <Button
+        android:id="@+id/motor_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:text="Motor test" />
+    
+    <Button 
+        android:id="@+id/btn_capture"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:text="Capture"/>
+    
+    <TextView 
+        android:id="@+id/ai_message"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:textSize="32sp"/>
+    
+    <ImageView 
+        android:id="@+id/pic_step_towards"
+        android:layout_width="300dp"
+        android:layout_height="230dp"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"/>
+    <TextView 
+        android:id="@+id/step_towards_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="32sp"
+        android:layout_centerInParent="true"
+        android:paddingBottom="100dp"
+        android:textColor="@android:color/holo_orange_dark"/>
+    <ImageView
+        android:id="@+id/pic_current_step"
+        android:layout_width="300dp"
+        android:layout_height="230dp"
+        android:layout_below="@+id/pic_step_towards"
+        android:layout_centerHorizontal="true"
+        />
+    <TextView 
+        android:id="@+id/current_step_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="32sp"
+        android:layout_centerInParent="true"
+        android:paddingTop="100dp"
+        android:textColor="@android:color/holo_orange_dark"/>
+        />
+    
+    <TextView 
+        android:id="@+id/path_recording"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:gravity="center_horizontal"
+        android:text="Recording path"
+        android:textSize="32sp"/>
+
+    <ProgressBar
+        style="@android:style/Widget.Holo.ProgressBar.Horizontal"
+        android:id="@+id/track_proress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"/>
+    
+    <uk.ac.ed.insectlab.ant.CameraOverlay
+        android:id="@+id/camera_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+</RelativeLayout>
