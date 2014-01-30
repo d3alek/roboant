@@ -10,9 +10,24 @@ from twisted.internet.task import LoopingCall
 
 import sys
 
+screenWidth = 1200
+screenHeight = 800
+maxStepImages = 8 
+imageSize = screenWidth/maxStepImages
 
-SCREEN_SIZE = (600, 600)
+SCREEN_SIZE = (screenWidth, screenHeight)
+
+imagePosition = []
+imageWidth = screenWidth/maxStepImages
+for i in range(maxStepImages):
+    imagePosition += [(i*imageWidth, screenHeight/2.)]
+
+imageGoTowardsPosition = (screenWidth/2 - screenHeight/4, 0)
+picturesChanged = True
+
 name = 'RoboAnt'
+
+images = pygame.Surface((screenWidth, screenHeight))
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -102,9 +117,46 @@ from twisted.protocols.basic import LineReceiver
 
 mProtocol = None
 
+class Images:
+    GoTowards, LookAround = range(2)
+
 class AntRobotControl(LineReceiver):
+    delimiter = '\n'
+    imgData = ""
+    pictureEnd = "picture end\n"
+    pictureStart = "picture start"
+    gotowardsEnd = "gotowards"
+
     def lineReceived(self, line):
-        self.sendLine(line)
+        #self.sendLine(line)
+        print line
+        if line.startswith(self.pictureStart):
+            if line.endswith(self.gotowardsEnd):
+                self.imageType = Images.GoTowards
+            else:
+                self.imageType = Images.LookAround
+                self.imageNum = int(line.split()[-1]) 
+            self.setRawMode()
+            self.imgData = ""
+    def rawDataReceived(self, data):
+        global picturesChanged
+        print "Raw data"
+        if data.endswith(self.pictureEnd):
+            print "Picture end found"
+            self.imgData += data[:-len(self.pictureEnd)]
+            f = ""
+            if self.imageType == Images.LookAround:
+                f = open('image_' + str(self.imageNum) + '.jpeg', 'wb')
+            else:
+                f = open('image_go_towards.jpg', 'wb')
+            f.write(self.imgData)
+            f.close()
+            self.setLineMode();
+            picturesChanged = True
+
+        else:
+            self.imgData += data
+
 
 class AntRobotControlFactory(protocol.Factory):
     def buildProtocol(self, addr):
@@ -129,8 +181,11 @@ reactor.listenTCP(1234, AntRobotControlFactory())
 axis4 = 0
 rightDown = leftDown = False
 
+import os, re
+
+
 def events_tick():
-    global axisX, axisY, DELTA_MIN, axis4, rightDown, leftDown
+    global axisX, axisY, DELTA_MIN, axis4, rightDown, leftDown, imagePosition, imageGoTowardsPosition, picturesChanged, imageSize
     screen.fill(pygame.Color(255, 255, 255)) 
     #print "IMHERE BEFORE RECV"
     #data = conn.recv(BUFFER_SIZE)
@@ -140,6 +195,27 @@ def events_tick():
         #break
     #print "received data:", data
 #    #conn.send(data)  # echo changeX = False changeY = False
+
+    if picturesChanged:
+        for fname in os.listdir('.'):
+            m = re.search(r'image_((-?\d+)|(go_towards))', fname)
+            if m == None:
+                continue
+            
+            print fname
+            imageSurface = pygame.image.load(fname)
+            if m.group(1) == 'go_towards':
+                imageSurface = pygame.transform.scale(imageSurface,
+                                                      (screenHeight/2, screenHeight/2))
+                images.blit(imageSurface, imageGoTowardsPosition)
+            else:
+                imageSurface = pygame.transform.scale(imageSurface, (imageSize, imageSize))
+                imageNum = int(m.group(1))
+                images.blit(imageSurface, imagePosition[imageNum])
+        picturesChanged = False
+
+    screen.blit(images, (0, 0))
+
     change4 = False
     changeX = False
 
@@ -240,7 +316,7 @@ def events_tick():
         moveLeftWheel(200)
     if rightDown:
         moveRightWheel(200)
-    pygame.draw.circle(screen, pygame.Color(0, 255, 0), (axisX+300, axisY+300), 20, 0)
+    #pygame.draw.circle(screen, pygame.Color(0, 255, 0), (axisX+300, axisY+300), 20, 0)
     pygame.display.update()
 
 lastSentRight = 0

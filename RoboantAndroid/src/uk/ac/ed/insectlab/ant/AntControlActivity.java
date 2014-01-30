@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import uk.ac.ed.insectlab.ant.RoboPicture.PictureType;
 import uk.ac.ed.insectlab.ant.RouteSelectionDialogFragment.RouteSelectedListener;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
@@ -177,6 +178,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 								Bitmap cropped = cropCameraFromBitmap(bmp);
 								mStepTowardsPic.setImageBitmap(cropped);
+								mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
 
 								//								StringBuilder str = new StringBuilder(); 
 								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
@@ -396,6 +398,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			public void onPictureTaken(byte[] data, Camera camera) {
 				Log.i(TAG, "Picture for AIControl taken");
 				mAIControl.stepTowards(data); 
+				mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
 				ImageView stepTowards = (ImageView)findViewById(R.id.pic_step_towards);
 				Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 				stepTowards.setImageBitmap(bmp);
@@ -880,16 +883,16 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 	}
 
 	@Override
-	public void takePicture(final CameraReceiver receiver) {
+	public void takePicture(final CameraReceiver receiver, final int pictureNum) {
 		final PictureCallback sendToReceiver = new PictureCallback() {
 
 			@Override
 			public void onPictureTaken(byte[] data, Camera camera) {
 				receiver.receivePicture(data); 
-//				mTcpClient.sendPicture(data);
-				new SendPictureTask().execute(data);
+				mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
+//				new SendPictureTask().execute(data);
 				delayedStartPreview();
-				new SaveImageTask().execute(data);
+				new SaveImageTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, data);
 			}
 		};
 		try {
@@ -903,7 +906,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 				@Override
 				public void run() {
-					takePicture(receiver);
+					takePicture(receiver, pictureNum);
 				}
 			}, 100);
 		}
@@ -913,7 +916,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 				@Override
 				public void run() {
-					takePicture(receiver);
+					takePicture(receiver, pictureNum);
 				}
 			}, 100);
 		}

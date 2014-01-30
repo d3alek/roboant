@@ -159,9 +159,10 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 					ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
 					long startTime = System.currentTimeMillis();
+					int num = 0;
 					while (!mFinishedTurning) {
 						long time = System.currentTimeMillis();
-						Bitmap bmp = makeBitmap(takePicture());
+						Bitmap bmp = makeBitmap(takePicture(num++));
 						turnsteps.add(new TurnStep(bmp, time - startTime));
 					}
 					long endTime = System.currentTimeMillis();
@@ -208,9 +209,10 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 				ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
 				long startTime = System.currentTimeMillis();
+				int num = 0;
 				while (!mFinishedTurning) {
 					long time = System.currentTimeMillis();
-					Bitmap bmp = makeBitmap(takePicture());
+					Bitmap bmp = makeBitmap(takePicture(num++));
 					turnsteps.add(new TurnStep(bmp, time - startTime));
 				}
 				
@@ -220,14 +222,14 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 				
 				Log.i(TAG, "Runnning for " + (endTime - startTime));
 				
-				moveTowardsMin(turnsteps, mRoutePictures, endTime - startTime);
+				moveTowardsMin(turnsteps, bitmap, endTime - startTime);
 			}
 		}
 	}
 	
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards, long ranFor) {
 		
-		Log.i(TAG, "Turn pictures: " + turnsteps.size());
+		Log.i(TAG, "Turn pictures: " + turnsteps.size() + " moveTowards pictures " + moveTowards.size());
 
 		int picNum;
 		double minTurnDist, minRoutePicDist, dist;
@@ -358,8 +360,8 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		mGoTowardsNum.setText(mGoTowardsToPublish+"");
 	}
 
-	private byte[] takePicture() {
-		mCameraControl.takePicture(this);
+	private byte[] takePicture(int pictureNum) {
+		mCameraControl.takePicture(this, pictureNum);
 
 		waitLock();
 		//        return imagesSSD(mReceivedPictures.peekLast(), mCompareTo);

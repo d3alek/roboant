@@ -2,7 +2,9 @@ package uk.ac.ed.insectlab.ant;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
@@ -30,6 +32,7 @@ private static final String TAG = "TcpClient";
     private BufferedReader mBufferIn;
 	private long mLastKeepAlive;
     private boolean mStopped;
+	private OutputStream mOutputStream;
  
     /**
      * Constructor of the class. OnMessagedReceived listens for the messages received from server
@@ -92,7 +95,8 @@ private static final String TAG = "TcpClient";
             	mLastKeepAlive = System.currentTimeMillis();
  
                 //sends the message to the server
-                mBufferOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
+            	mOutputStream = socket.getOutputStream();
+                mBufferOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(mOutputStream)), true);
  
                 //receives the message which the server sends back
                 mBufferIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -180,17 +184,27 @@ private static final String TAG = "TcpClient";
 		public void disconnected();
     }
 
-	public void sendPicture(byte[] data) {
-		new SendPictureTask().execute(data);
+	public void sendPicture(RoboPicture picture) {
+		new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
 	}
 	
-	private class SendPictureTask extends AsyncTask<byte[], Void, Void> {
+	private class SendPictureTask extends AsyncTask<RoboPicture, Void, Void> {
 
 		@Override
-		protected Void doInBackground(byte[]... params) {
+		protected Void doInBackground(RoboPicture... params) {
+			RoboPicture picture = params[0];
 			if (mBufferOut != null && !mBufferOut.checkError()) {
-	            mBufferOut.println("Sending picture");
+				Log.i(TAG, "Sending picture");
+	            mBufferOut.println("picture start " + picture);
 	            mBufferOut.flush();
+	            try {
+					mOutputStream.write(picture.data);
+					mOutputStream.flush();
+				} catch (IOException e) {
+					Log.i(TAG, "SendPicture failed on writing bytes");
+					e.printStackTrace();
+				}
+	            mBufferOut.println("picture end");
 	        }
 			return null;
 		}
