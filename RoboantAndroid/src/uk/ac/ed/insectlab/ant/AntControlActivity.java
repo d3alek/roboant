@@ -60,7 +60,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 	private static final long CAMERA_TIMEOUT = 1000;
 	private final String TAG = AntControlActivity.class.getSimpleName();
 
-	private final String SERVER_IP = "172.20.153.140";
+	private final String SERVER_IP = "172.20.155.17";
 
 	/**
 	 * Driver instance, passed in statically via
@@ -177,10 +177,10 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 								Bitmap cropped = cropCameraFromBitmap(bmp);
 								mStepTowardsPic.setImageBitmap(cropped);
-								
-//								StringBuilder str = new StringBuilder(); 
+
+								//								StringBuilder str = new StringBuilder(); 
 								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
-								
+
 								for (int i = 0; i < cropped.getWidth(); ++i) {
 									StringBuilder str = new StringBuilder(); 
 									for (int j = 0; j < cropped.getHeight(); ++j) {
@@ -192,11 +192,11 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 										str.append(",");
 										str.append(Color.blue(color)); 
 										str.append(")");
-										
+
 									}
 									Log.i(TAG, "onPictureTaken " + str.toString());
 								}
-//								Log.i(TAG, "onPictureTaken " + str.toString());
+								//								Log.i(TAG, "onPictureTaken " + str.toString());
 								//								mStepTowardsPic.setImageBitmap(bmp);
 								if (pictureFile == null){
 									Log.d(TAG, "Error creating media file, check storage permissions");
@@ -253,12 +253,12 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 					boolean fromUser) {
 				switch (seekBar.getId()) {
 				case R.id.left:
-					mRoboAntControl.setLeftSpeed(progress);
-					Log.i(TAG, "Setting left speed to " + progress);
+					//					mRoboAntControl.setLeftSpeed(progress);
+					//					Log.i(TAG, "Setting left speed to " + progress);
 					break;
 				case R.id.right:
-					mRoboAntControl.setRightSpeed(progress);
-					Log.i(TAG, "Setting right speed to " + progress);
+					//					mRoboAntControl.setRightSpeed(progress);
+					//					Log.i(TAG, "Setting right speed to " + progress);
 					break;
 
 				default:
@@ -540,7 +540,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 		@Override
 		protected TcpClient doInBackground(Void... nothing) {
-			Log.i(TAG, "Starting a ConnectTask");
+			//			Log.i(TAG, "Starting a ConnectTask");
 
 			if (mTcpClient != null) {
 				return null;
@@ -557,7 +557,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 				@Override
 				public void disconnected() {
-					Log.i(TAG, "Disconnected");
+					//					Log.i(TAG, "Disconnected");
 					mTcpClient = null;
 
 					AntControlActivity.this.runOnUiThread(new Runnable() {
@@ -576,7 +576,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 				@Override
 				public void connected() {
-					Log.i(TAG, "Connected");
+					//					Log.i(TAG, "Connected");
 					AntControlActivity.this.runOnUiThread(new Runnable() {
 
 						@Override
@@ -611,7 +611,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				if (mTcpClient != null) {
 					return;
 				}
-				Log.i(TAG, "Trying to connect to server");
+				//				Log.i(TAG, "Trying to connect to server");
 				new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 				handler.postDelayed(this, period);
 			}
@@ -886,7 +886,10 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			@Override
 			public void onPictureTaken(byte[] data, Camera camera) {
 				receiver.receivePicture(data); 
+//				mTcpClient.sendPicture(data);
+				new SendPictureTask().execute(data);
 				delayedStartPreview();
+				new SaveImageTask().execute(data);
 			}
 		};
 		try {

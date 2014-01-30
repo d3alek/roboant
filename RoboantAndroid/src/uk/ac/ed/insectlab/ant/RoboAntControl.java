@@ -18,6 +18,7 @@ public class RoboAntControl {
         mSerialIoManager = sm;
     }
 
+    @Deprecated
     public synchronized void setRightSpeed(int speed) {
         mRightSpeed = speed; 
         sendSpeeds();
@@ -32,7 +33,12 @@ public class RoboAntControl {
             e.printStackTrace();
         }
     }
-
+    
+    public synchronized void setSpeeds(int left, int right) {
+    	mLeftSpeed = left; mRightSpeed = right;
+    	sendSpeeds();
+    }
+    @Deprecated
     public synchronized void setLeftSpeed(int speed) {
         mLeftSpeed = speed; 
         sendSpeeds();

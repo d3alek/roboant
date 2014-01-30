@@ -228,7 +228,7 @@ camera.startPreview();
         // canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
         Log.i(TAG, "Draw circle is " + centerXRatio + " " + centerYRatio + " " + cropRadiusRatio + " Image size is " + bitmap.getWidth() + " " + bitmap.getHeight());
         float centerX = (1 - centerYRatio) * rect.width();
-        float centerY = centerXRatio * rect.height();
+        float centerY = (1 - centerXRatio) * rect.height();
         float radius = cropRadiusRatio * rect.height();
         canvas.drawCircle(centerX, centerY,
         		radius, paint);

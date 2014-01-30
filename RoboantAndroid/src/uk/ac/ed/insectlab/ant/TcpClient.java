@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
+import android.os.AsyncTask;
 import android.util.Log;
 
 public class TcpClient {
@@ -79,7 +80,7 @@ private static final String TAG = "TcpClient";
             //here you must put your computer's IP address.
             InetAddress serverAddr = InetAddress.getByName(serverip);
  
-            Log.e("TCP Client", "C: Connecting...");
+//            Log.e("TCP Client", "C: Connecting...");
  
             //create a socket to make the connection with the server
             Socket socket = new Socket(serverAddr, serverport);
@@ -131,7 +132,7 @@ private static final String TAG = "TcpClient";
 	                    	continue;
 	                    }
                 	} catch (SocketTimeoutException e) {
-                		Log.i(TAG, "read timeout");
+//                		Log.i(TAG, "read timeout");
                 		mServerMessage = null;
                 	}
  
@@ -146,7 +147,7 @@ private static final String TAG = "TcpClient";
  
             } catch (Exception e) {
  
-                Log.e("TCP", "S: Error", e);
+//                Log.e("TCP", "S: Error", e);
  
             } finally {
                 //the socket must be closed. It is not possible to reconnect to this socket
@@ -160,7 +161,7 @@ private static final String TAG = "TcpClient";
         } catch (Exception e) {
  
 //            Log.e("TCP", "C: Error", e);
-        	Log.e("TCP", "Connection error");
+//        	Log.e("TCP", "Connection error");
             if (!mStopped) {
                 mMessageListener.disconnected();
             }
@@ -178,4 +179,21 @@ private static final String TAG = "TcpClient";
 
 		public void disconnected();
     }
+
+	public void sendPicture(byte[] data) {
+		new SendPictureTask().execute(data);
+	}
+	
+	private class SendPictureTask extends AsyncTask<byte[], Void, Void> {
+
+		@Override
+		protected Void doInBackground(byte[]... params) {
+			if (mBufferOut != null && !mBufferOut.checkError()) {
+	            mBufferOut.println("Sending picture");
+	            mBufferOut.flush();
+	        }
+			return null;
+		}
+		
+	}
 }

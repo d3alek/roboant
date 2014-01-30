@@ -1,6 +1,7 @@
 package uk.ac.ed.insectlab.ant;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -105,92 +106,72 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		super.onPreExecute();
 	}
 
+
+	int TURN_SPEED = 80;
+	int TURN_FOR = 1500;
+	private boolean mFinishedTurning;
+
+	private class TurnStep {
+
+		private Bitmap bmp;
+		private long time;
+
+		public TurnStep(Bitmap bmp, long time) {
+			this.bmp = bmp; this.time = time;
+		}
+	}
+
 	@Override
 	protected Void doInBackground(RoboAntControl... params) {
 		Log.i(TAG, "doInBackground");
 		mRoboAntControl = params[0];
+
+
 		while (true) {
-
-			Log.i(TAG, "IMHERE1");
-
 			if (mFollowingRoute) {
-				Log.i(TAG, "IMHERE2");
 				mBestImageNum = -1;
 				int counter = 0;
 				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
 					Log.i(TAG, "Following Route loop " + counter++);
 
-					int step = -1;
-					double minDist = 10000000;
-					double dist;
-					int minStep = -1;
-					Bitmap minPic = null;
-					Bitmap minPicTowards = null;
+					mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
 
-					for (int i = 0; i < 10; ++i) {
-						lookAroundStep();
 
-						if (mStop) {
-							return null;
+					mFinishedTurning = false;
+					mHandler.postDelayed(new Runnable() {
+
+						@Override
+						public void run() {
+							mRoboAntControl.setSpeeds(-TURN_SPEED, TURN_SPEED);
+
+							mHandler.postDelayed(new Runnable() {
+
+
+								@Override
+								public void run() {
+									mRoboAntControl.setSpeeds(0, 0);
+									mFinishedTurning = true;
+								}
+							}, 2*TURN_FOR);
+
 						}
+					}, TURN_FOR);
 
-						step = mLookAroundStep;
-
+					ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
+					long startTime = System.currentTimeMillis();
+					while (!mFinishedTurning) {
+						long time = System.currentTimeMillis();
 						Bitmap bmp = makeBitmap(takePicture());
-
-						if (mStop) {
-							bmp.recycle();
-							return null;
-						}
-						//                    dist = imagesSSD(takePicture(), mCompareTo);
-						//                    Log.i(TAG, "Dist " + step + " is " + dist);
-
-						dist = 100000000;
-
-						double thisDist;
-						int picNum = 0;
-						Bitmap bestPicTowards = null;
-						for (Bitmap routePic: mRoutePictures) {
-							//                            if (picNum < mBestImageNum) {
-							//                                continue;
-							//                            }
-							thisDist = imagesSSD(routePic, bmp);
-							if (thisDist < dist) {
-								dist = thisDist;
-								mBestImageNum = picNum; 
-								bestPicTowards = routePic;
-								Log.i(TAG, "Best pic is " + mBestImageNum);
-							}
-							picNum += 1;
-						}
-
-						if (dist < minDist) {
-							minPicTowards = bestPicTowards;
-							minDist = dist;
-							minStep = step;
-							minPic = bmp;
-							Log.i(TAG, "New min is " + minStep + " : " + minDist);
-						}
-						else {
-							bmp.recycle();
-						}
-						String publishDist = new DecimalFormat("#.##").format(dist);
-						publishProgress(step+":"+publishDist+"\nMin:"+minDist+"\nMinStep:"+minStep);
+						turnsteps.add(new TurnStep(bmp, time - startTime));
 					}
-					mPicToPublishGoTowards  = minPicTowards;
-					mPicToPublish = minPic;
-					mCurrentStepToPublish = minStep;
-					mGoTowardsToPublish = mBestImageNum;
-					publishProgress("Going towards " + minStep + "\nDist:"+minDist);
-					goTowards(minStep);
-
-					if (mStop) {
-						return null;
-					}
-
+					long endTime = System.currentTimeMillis();
+					
+					Log.i(TAG, "Runnning for " + (endTime - startTime));
+					
+					moveTowardsMin(turnsteps, mRoutePictures, endTime - startTime);
 					Log.i(TAG, "Within " + (mRoutePictures.size() - mBestImageNum) + " of end");
-					mReceivedPictures.clear();
 				}
+
 				Log.i(TAG, "Follow route finished");
 				publishProgress("Follow route finished");
 				mFollowingRoute = false;
@@ -202,42 +183,137 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 				if (mStop) return null;
 
-				double dist, minDist = 1000000000;
-				int minStep = 0, step = 0;
-				Bitmap minPic = null;
-				mLookAroundDone = false;
-				mLookAroundStep = 0;
-				//        stepDirection(true);
+				mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
 
-				for (int i = 0; i < 10; ++i) {
-					lookAroundStep();
-					step = mLookAroundStep;
 
-					Bitmap pic = makeBitmap(takePicture());
-					dist = imagesSSD(pic, mCompareToBmp);
-					Log.i(TAG, "Dist " + step + " is " + dist);
-					if (dist < minDist) {
-						minDist = dist;
-						minStep = step;
-						minPic = pic;
-						Log.i(TAG, "New min is " + minStep + " : " + minDist);
+				mFinishedTurning = false;
+				mHandler.postDelayed(new Runnable() {
+
+					@Override
+					public void run() {
+						mRoboAntControl.setSpeeds(-TURN_SPEED, TURN_SPEED);
+
+						mHandler.postDelayed(new Runnable() {
+
+
+							@Override
+							public void run() {
+								mRoboAntControl.setSpeeds(0, 0);
+								mFinishedTurning = true;
+							}
+						}, 2*TURN_FOR);
+
 					}
-					mPicToPublish = pic;
-					//                    else {
-					//                        pic.recycle();
-					//                    }
-					String publishDist = new DecimalFormat("#.##").format(dist);
-					publishProgress(step+":"+publishDist+"\nMin:"+minDist+"\nMinStep:"+minStep);
-				}
-				//                mPicToPublish = minPic;
-				mPicToPublish = minPic;
-				publishProgress("Going towards " + minStep + "\nDist:"+minDist);
-				goTowards(minStep);
+				}, TURN_FOR);
 
-				Log.i(TAG, "Look around done");
-				mReceivedPictures.clear();
+				ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
+				long startTime = System.currentTimeMillis();
+				while (!mFinishedTurning) {
+					long time = System.currentTimeMillis();
+					Bitmap bmp = makeBitmap(takePicture());
+					turnsteps.add(new TurnStep(bmp, time - startTime));
+				}
+				
+				List<Bitmap> bitmap = new ArrayList<Bitmap>();
+				bitmap.add(mCompareToBmp);
+				long endTime = System.currentTimeMillis();
+				
+				Log.i(TAG, "Runnning for " + (endTime - startTime));
+				
+				moveTowardsMin(turnsteps, mRoutePictures, endTime - startTime);
 			}
 		}
+	}
+	
+	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards, long ranFor) {
+		
+		Log.i(TAG, "Turn pictures: " + turnsteps.size());
+
+		int picNum;
+		double minTurnDist, minRoutePicDist, dist;
+		Bitmap bestPicTowards = null;
+		Bitmap minTurnPic = null;
+		Bitmap minRoutePic = null;
+		minTurnDist = 100000000000L;
+		int minStep = -1;
+		int minRouteStep = -1;
+		int turnNum = 0;
+		for (TurnStep step: turnsteps) {
+			Bitmap bmp = step.bmp;
+			minRoutePicDist = 100000000000L; 
+			picNum = 0;
+			int currentMinRouteStep = -1;
+			bestPicTowards = null;
+			for (Bitmap routePic: moveTowards) {
+				dist = imagesSSD(routePic, bmp);
+				Log.i(TAG, "Dist is " + dist);
+				if (dist < minRoutePicDist) {
+					minRoutePicDist = dist;
+					currentMinRouteStep = picNum;  
+					bestPicTowards = routePic;
+					Log.i(TAG, "Best route pic for step " + turnNum + " is " + currentMinRouteStep + " " + dist);
+				}
+				picNum += 1;
+			}
+
+			if (minRoutePicDist < minTurnDist) {
+				minTurnDist = minRoutePicDist;
+				minTurnPic = bmp;
+				minRoutePic = bestPicTowards;
+				minStep = turnNum;
+				minRouteStep = currentMinRouteStep;
+			}
+			mPicToPublishGoTowards  = minRoutePic;
+			mPicToPublish = minTurnPic;
+			mCurrentStepToPublish = minStep;
+			mGoTowardsToPublish = minRouteStep;
+			publishProgress("Turn " + turnNum + "Current min is " + minStep + " " + minRouteStep + " " + minTurnDist);
+			Log.i(TAG, "Current min is " + minStep + " " + minRouteStep + " " + minTurnDist);
+			turnNum ++;
+		}
+
+		mPicToPublishGoTowards  = minRoutePic;
+		mPicToPublish = minTurnPic;
+		mCurrentStepToPublish = minStep;
+		mGoTowardsToPublish = minRouteStep;
+		mBestImageNum = minRouteStep;
+		publishProgress("Going towards " + minStep + "\nDist:"+minTurnDist);
+
+		mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
+
+		long minTime = turnsteps.get(mCurrentStepToPublish).time;
+		
+		long oneDirectionTurnFor = ranFor / 2;
+
+		long turnFor = minTime < oneDirectionTurnFor ? oneDirectionTurnFor + minTime : 2 * oneDirectionTurnFor - minTime;
+
+		Log.i(TAG, "minTime is " + minTime + " turnFor " + turnFor);
+
+		mHandler.postDelayed(new Runnable() {
+
+			@Override
+			public void run() {
+				mRoboAntControl.setSpeeds(0, 0);
+				synchronized (lock) {
+					lock.notify();
+				}
+			}
+		}, turnFor);
+		waitLock();
+		Log.i(TAG, "Facing the correct direction!");
+
+		mRoboAntControl.setSpeeds(TURN_SPEED, TURN_SPEED);
+		mHandler.postDelayed(new Runnable() {
+
+			@Override
+			public void run() {
+				mRoboAntControl.setSpeeds(0, 0);
+				synchronized (lock) {
+					lock.notify();
+				}
+			}
+		}, TURN_FOR);
+		waitLock();
 	}
 
 	private Bitmap makeBitmap(byte[] rawJPEG) {
@@ -269,6 +345,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		}
 		if (mPicToPublishGoTowards != null) {
 			mGoTowardsPic.setImageBitmap(mPicToPublishGoTowards);
+			mPicToPublishGoTowards = null;
 		}
 		if (mFollowingRoute) {
 			mProgressBar.setProgress(mBestImageNum);
@@ -305,7 +382,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 			this.x = x; this.y = y;
 		}
 	}
-	
+
 	private double imagesSSD(Bitmap b1, Bitmap b2) {
 
 		if (mPixelsToCheck == null) {
@@ -341,24 +418,24 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 		//        int cropW  = b1.getWidth() / 4;
 		//        int cropH = b1.getHeight() / 8;
-//		for (int i = 0; i < b1.getWidth(); ++i) {
-//			for (int j = 0; j < b1.getHeight(); ++j) {
+		//		for (int i = 0; i < b1.getWidth(); ++i) {
+		//			for (int j = 0; j < b1.getHeight(); ++j) {
 		for (Point p: mPixelsToCheck) {
-				pixel1 = b1.getPixel(p.x, p.y);
-				pixel2 = b2.getPixel(p.x, p.y);
-				r1 = Color.red(pixel1);
-				r2 = Color.red(pixel2);
-				g1 = Color.green(pixel1);
-				g2 = Color.green(pixel2);
-				bl1 = Color.blue(pixel1);
-				bl2 = Color.blue(pixel2);
+			pixel1 = b1.getPixel(p.x, p.y);
+			pixel2 = b2.getPixel(p.x, p.y);
+			r1 = Color.red(pixel1);
+			r2 = Color.red(pixel2);
+			g1 = Color.green(pixel1);
+			g2 = Color.green(pixel2);
+			bl1 = Color.blue(pixel1);
+			bl2 = Color.blue(pixel2);
 
-				ssd += (r1 - r2) * (r1 - r2) +
-						(g1 - g2) * (g1 - g2) +
-						(bl1 - bl2) * (bl1 - bl2);
+			ssd += (r1 - r2) * (r1 - r2) +
+					(g1 - g2) * (g1 - g2) +
+					(bl1 - bl2) * (bl1 - bl2);
 		}
-//			}
-//		}
+		//			}
+		//		}
 
 		//        Log.i(TAG, "imagesSSD runtime " + (System.currentTimeMillis() - start));
 
