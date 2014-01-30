@@ -1,9 +1,10 @@
 package uk.ac.ed.insectlab.ant;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
@@ -16,7 +17,6 @@ import android.os.Message;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.GestureDetector;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -292,6 +292,18 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
 
     protected static final String TAG = "CameraOverlay";
 
+	private static final String CAMERA_X = "camera_x";
+
+	private static final String CAMERA_Y = "camera_y";
+
+	private static final String CAMERA_RADIUS = "camera_radius";
+
+	private static final String CAMERA_X_RATIO = "camera_x_ratio";
+
+	private static final String CAMERA_Y_RATIO = "camera_y_ratio";
+
+	private static final String RADIUS_RATIO = "radius_ratio";
+
     private CameraThread thread;
 
 	private GestureDetector mGestureDetector;
@@ -311,6 +323,8 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
 	private float mCameraYRatio;
 
 	private float mRadiusRatio;
+
+	private Settings mSettings;
 
 
     public CameraOverlay(Context context, AttributeSet attrs) {
@@ -333,7 +347,35 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
         
         setFocusable(true);
         
+        mSettings = GLOBAL.getSettings();
+        loadCameraCircle();
+        
         mGestureDetector = new GestureDetector(context, new GestureListener());
+    }
+    
+    private void loadCameraCircle() {
+    	SharedPreferences prefs = mSettings.getSharedPrefs();
+
+        mCameraX = prefs.getFloat(CAMERA_X, 0);
+        mCameraY = prefs.getFloat(CAMERA_Y, 0);
+        mCameraRadius = prefs.getInt(CAMERA_RADIUS, 0);
+        mCameraXRatio = prefs.getFloat(CAMERA_X_RATIO, 0);
+        mCameraYRatio = prefs.getFloat(CAMERA_Y_RATIO, 0);
+        mRadiusRatio = prefs.getFloat(RADIUS_RATIO, 0);
+    }
+    private void saveCameraCircle() {
+    	SharedPreferences prefs = mSettings.getSharedPrefs();
+    	
+    	Editor editor = prefs.edit();
+    	
+    	editor.putFloat(CAMERA_X, mCameraX);
+    	editor.putFloat(CAMERA_Y, mCameraY);
+    	editor.putInt(CAMERA_RADIUS, mCameraRadius);
+    	editor.putFloat(CAMERA_X_RATIO, mCameraXRatio);
+    	editor.putFloat(CAMERA_Y_RATIO, mCameraYRatio);
+    	editor.putFloat(RADIUS_RATIO, mRadiusRatio);
+    	
+    	editor.apply();
     }
 
     @Override
@@ -394,6 +436,7 @@ public class CameraOverlay extends SurfaceView implements SurfaceHolder.Callback
     public void surfaceDestroyed(SurfaceHolder holder) {
         // we have to tell thread to shut down & wait for it to finish, or else
         // it might touch the Surface after we return and explode
+    	saveCameraCircle();
         boolean retry = true;
         thread.setRunning(false);
         while (retry) {

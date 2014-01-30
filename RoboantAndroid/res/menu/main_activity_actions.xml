@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item
         android:id="@+id/action_motor_test"
         android:title="@string/motor_test"/>
+    <item
+        android:id="@+id/action_ai_toggle"
+        android:title="@string/ai"/>
+    <item 
+        android:id="@+id/action_calibrate"
+        android:title="@string/calibrate"/>
+     <item 
+        android:id="@+id/action_select_route"
+        android:title="@string/select_route"/>
 
 </menu>

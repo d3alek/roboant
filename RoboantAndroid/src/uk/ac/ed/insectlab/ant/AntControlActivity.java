@@ -6,17 +6,24 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import uk.ac.ed.insectlab.ant.RouteSelectionDialogFragment.RouteSelectedListener;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
+import android.app.DialogFragment;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SyncRequest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
 import android.hardware.Camera.PictureCallback;
@@ -46,13 +53,14 @@ import android.widget.Toast;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-public class AntControlActivity extends Activity implements CameraControl {
+public class AntControlActivity extends Activity implements CameraControl, RouteSelectedListener {
 
 	private static final int CAMERA_NUMBER = 1;
 
 	private static final long CAMERA_TIMEOUT = 1000;
-
 	private final String TAG = AntControlActivity.class.getSimpleName();
+
+	private final String SERVER_IP = "172.20.153.140";
 
 	/**
 	 * Driver instance, passed in statically via
@@ -146,7 +154,7 @@ public class AntControlActivity extends Activity implements CameraControl {
 		mTrackProgressBar.setVisibility(View.GONE);
 
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-		
+
 		mLeftSpeedIndicator = (EditText)findViewById(R.id.leftValue);
 		mRightSpeedIndicator = (EditText)findViewById(R.id.rightValue);
 
@@ -167,8 +175,29 @@ public class AntControlActivity extends Activity implements CameraControl {
 
 								File pictureFile = Util.getOutputMediaFile(Constants.MEDIA_TYPE_IMAGE);
 								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
-								mStepTowardsPic.setImageBitmap(cropCameraFromBitmap(bmp));
-//								mStepTowardsPic.setImageBitmap(bmp);
+								Bitmap cropped = cropCameraFromBitmap(bmp);
+								mStepTowardsPic.setImageBitmap(cropped);
+								
+//								StringBuilder str = new StringBuilder(); 
+								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
+								
+								for (int i = 0; i < cropped.getWidth(); ++i) {
+									StringBuilder str = new StringBuilder(); 
+									for (int j = 0; j < cropped.getHeight(); ++j) {
+										int color = cropped.getPixel(i, j);
+										str.append("(");
+										str.append(Color.red(color));
+										str.append(",");
+										str.append(Color.green(color));
+										str.append(",");
+										str.append(Color.blue(color)); 
+										str.append(")");
+										
+									}
+									Log.i(TAG, "onPictureTaken " + str.toString());
+								}
+//								Log.i(TAG, "onPictureTaken " + str.toString());
+								//								mStepTowardsPic.setImageBitmap(bmp);
 								if (pictureFile == null){
 									Log.d(TAG, "Error creating media file, check storage permissions");
 									return;
@@ -186,7 +215,7 @@ public class AntControlActivity extends Activity implements CameraControl {
 								}
 							}
 
-							
+
 						};
 						mCamera.takePicture(null, null, callback);
 					}
@@ -250,7 +279,7 @@ public class AntControlActivity extends Activity implements CameraControl {
 		mServerIP = (EditText)findViewById(R.id.serverIP);
 		mServerPort = (EditText)findViewById(R.id.serverPort);
 
-		mServerIP.setText("192.168.1.2");
+		mServerIP.setText(SERVER_IP);
 		mServerPort.setText("1234");
 
 		postConnectorRunnable();
@@ -273,16 +302,16 @@ public class AntControlActivity extends Activity implements CameraControl {
 				int width = getResources().getDisplayMetrics().widthPixels;
 				int height = getResources().getDisplayMetrics().heightPixels;
 				Camera.Parameters params = mCamera.getParameters();
-//				params.setPictureSize(, 768);
-//				params.setSceneMode(Camera.Parameters.);
-//				params.setPreviewSize(width, height);
-//				params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-//				params.setFocusMode(Camera.Parameters.);
-//				params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_TWILIGHT);
-//				params.setExposureCompensation(params.getMaxExposureCompensation());
+				//				params.setPictureSize(, 768);
+				//				params.setSceneMode(Camera.Parameters.);
+				//				params.setPreviewSize(width, height);
+				//				params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+				//				params.setFocusMode(Camera.Parameters.);
+				//				params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_TWILIGHT);
+				//				params.setExposureCompensation(params.getMaxExposureCompensation());
 				mCamera.setParameters(params);
 
-				
+
 				mPreview = new CameraPreview(this, mCamera);
 				FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
 				preview.addView(mPreview);
@@ -298,45 +327,67 @@ public class AntControlActivity extends Activity implements CameraControl {
 						}
 						);
 				handler.postDelayed(new Runnable() {
-					
+
 					@Override
 					public void run() {
 						mCamera.autoFocus(new AutoFocusCallback() {
 							@Override
 							public void onAutoFocus(boolean success, Camera camera) {
 								Log.i(TAG, "On auto focus " + success);
-								
+
 							}
 						});
-						
+
 					}
 				}, 2000);
 			}
 		}
 	}
-	
+
+	private void showRouteSelectionDialog() {
+		FragmentTransaction ft = getFragmentManager().beginTransaction();
+		Fragment prev = getFragmentManager().findFragmentByTag("dialog");
+		if (prev != null) {
+			ft.remove(prev);
+		}
+		ft.addToBackStack(null);
+
+		// Create and show the dialog.
+		DialogFragment newFragment = new RouteSelectionDialogFragment();
+		newFragment.show(ft, "dialog");
+	}
+
 	private Bitmap cropCameraFromBitmap(Bitmap bmp) {
 		return Util.getCroppedBitmap(bmp, getCameraXRatio(), getCameraYRatio(), getRadiusRatio());
 	}
-	
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-	    // Inflate the menu items for use in the action bar
-	    MenuInflater inflater = getMenuInflater();
-	    inflater.inflate(R.menu.main_activity_actions, menu);
-	    return super.onCreateOptionsMenu(menu);
+		// Inflate the menu items for use in the action bar
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.main_activity_actions, menu);
+		return super.onCreateOptionsMenu(menu);
 	}
-	
+
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		// Handle presses on the action bar items
-	    switch (item.getItemId()) {
-	        case R.id.action_motor_test:
-				new MotorTestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
-	            return true;
-	        default:
-	            return super.onOptionsItemSelected(item);
-	    }
+		switch (item.getItemId()) {
+		case R.id.action_motor_test:
+			new MotorTestTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
+			return true;
+		case R.id.action_ai_toggle:
+			toggleAI();
+			return true;
+		case R.id.action_calibrate: 
+			mRoboAntControl.calibrate();
+			return true;
+		case R.id.action_select_route:
+			showRouteSelectionDialog();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
 	}
 
 	private void takeAIPicture() {
@@ -601,21 +652,8 @@ public class AntControlActivity extends Activity implements CameraControl {
 		}
 		else if (message.startsWith("ai")) {
 			Log.i(TAG, "ai message!");
-			if (mAIControl != null) {
-				mAIControl.stop();
-				mAIMessage.setText("");
-				mAIControl = null;
-			}
-			else {
-				TextView currentStepNum = (TextView)findViewById(R.id.current_step_num);
-				TextView stepTowardsNum = (TextView)findViewById(R.id.step_towards_num);
-				mAIControl = new AIControlTask(this, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
-				mAIControl.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
+			toggleAI();
 
-				//                if (!mRoutePictures.isEmpty()) {
-				//                    mAIControl.followRoute(mRoutePictures);
-				//                }
-			}
 		}
 		else if (message.startsWith("pic")) {
 			Log.i(TAG, "pic message!");
@@ -636,7 +674,10 @@ public class AntControlActivity extends Activity implements CameraControl {
 			else {
 				mRecordingRoute = false;
 				handler.removeCallbacks(mRecordingRunnable);
-				mRecordingText.setVisibility(View.GONE);
+				synchronized (mRoutePictures) {
+					new SaveRecordedRouteTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoutePictures);
+				}
+				mRecordingText.setVisibility(View.INVISIBLE);
 			}
 		}
 		else if (message.startsWith("calibrate")) {
@@ -647,8 +688,23 @@ public class AntControlActivity extends Activity implements CameraControl {
 		}
 	}
 
+	private void toggleAI() {
+		if (mAIControl != null) {
+			mAIControl.stop();
+			mAIMessage.setText("");
+			mAIControl = null;
+		}
+		else {
+			TextView currentStepNum = (TextView)findViewById(R.id.current_step_num);
+			TextView stepTowardsNum = (TextView)findViewById(R.id.step_towards_num);
+			mAIControl = new AIControlTask(this, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
+			mAIControl.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
+		}
+
+	}
+
 	private long ROUTE_PICTURES_DELAY = 1000;
-	LinkedList<Bitmap> mRoutePictures = new LinkedList<Bitmap>();
+	List<Bitmap> mRoutePictures = new LinkedList<Bitmap>();
 	private Runnable mRecordingRunnable;
 	private void postRecordingRunnable() {
 		for (Bitmap bmp : mRoutePictures) {
@@ -660,22 +716,30 @@ public class AntControlActivity extends Activity implements CameraControl {
 
 			@Override
 			public void run() {
-				mRecordingRunnable = this;
-				PictureCallback callback = new PictureCallback() {
-					@Override
-					public void onPictureTaken(byte[] data, Camera camera) {
-						mRoutePictures.add(BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts()));
-						Log.i(TAG, "Route picture taken: " + mRoutePictures.size());
-						delayedStartPreview();
+				synchronized (mRoutePictures) {
+					if (!mRecordingRoute) {
+						return;
 					}
-				};
-				try {
-					mCamera.takePicture(null, null, callback); 
-					handler.postDelayed(this, ROUTE_PICTURES_DELAY);
-				}
-				catch (Exception e) {
-					e.printStackTrace();
-					handler.postDelayed(this, 100);
+
+					mRecordingRunnable = this;
+					PictureCallback callback = new PictureCallback() {
+						@Override
+						public void onPictureTaken(byte[] data, Camera camera) {
+							Bitmap big = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
+							mRoutePictures.add(Util.getCroppedBitmap(big, getCameraXRatio(), getCameraYRatio(), getRadiusRatio()));
+							big.recycle();
+							Log.i(TAG, "Route picture taken: " + mRoutePictures.size());
+							delayedStartPreview();
+						}
+					};
+					try {
+						mCamera.takePicture(null, null, callback); 
+						handler.postDelayed(this, ROUTE_PICTURES_DELAY);
+					}
+					catch (Exception e) {
+						e.printStackTrace();
+						handler.postDelayed(this, 100);
+					}
 				}
 			}
 		});
@@ -867,12 +931,20 @@ public class AntControlActivity extends Activity implements CameraControl {
 		return mCameraOverlay.getRadius();
 	}
 
+	@Override
+	public void onRouteSelected(List<Bitmap> bitmap) {
+		mRoutePictures = bitmap;
+
+	}
 
 
-//	@Override
-//	public void givePictureToReceiver() {
-//		// TODO Auto-generated method stub
-//
-//	}
+
+
+
+	//	@Override
+	//	public void givePictureToReceiver() {
+	//		// TODO Auto-generated method stub
+	//
+	//	}
 
 }

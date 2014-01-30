@@ -1,8 +1,17 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
@@ -16,15 +25,9 @@ import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.net.Uri;
 import android.os.Environment;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Surface;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 public class Util {
 
@@ -57,6 +60,28 @@ camera.startPreview();
 	        }
 	    }
 	};
+	
+	public static Uri getUriFromPath(String filePath, Context context) {
+	    long photoId;
+//	    Uri photoUri = MediaStore.Images.Media.getContentUri("external");
+	    Uri photoUri = MediaStore.Files.getContentUri("external");
+	 
+	    String[] projection = {MediaStore.Images.ImageColumns._ID};
+	    // TODO This will break if we have no matching item in the MediaStore.
+	    Cursor cursor = context.getContentResolver().query(photoUri, projection, MediaStore.Files.FileColumns.DATA + " LIKE ?", new String[] { filePath }, null);
+	    cursor.moveToFirst();
+	 
+	    int columnIndex = cursor.getColumnIndex(projection[0]);
+	    photoId = cursor.getLong(columnIndex);
+	 
+	    cursor.close();
+	    return Uri.parse(photoUri.toString() + "/" + photoId + "/");
+	}
+	
+	public static Uri getOutputMediaDirUri(Context context) {
+		return getUriFromPath(Environment.getExternalStoragePublicDirectory(
+				Environment.DIRECTORY_PICTURES) + File.separator + DIR_NAME, context);
+	}
 
 	/** Create a file Uri for saving an image or video */
 	public static Uri getOutputMediaFileUri(int type){
@@ -97,6 +122,40 @@ camera.startPreview();
 		}
 
 		return mediaFile;
+	}
+	
+	public static File getNewRouteStorageDir(Context context) {
+		// To be safe, you should check that the SDCard is mounted
+		// using Environment.getExternalStorageState() before doing this.
+		
+		File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
+				Environment.DIRECTORY_PICTURES), DIR_NAME);
+		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+		File routeStorageDir = new File(mediaStorageDir, "ROUTE_"+timeStamp);
+		// This location works best if you want the created images to be shared
+		// between applications and persist after your app has been uninstalled.
+
+		// Create the storage directory if it does not exist
+		if (! routeStorageDir.exists()){
+			if (! routeStorageDir.mkdirs()){
+				Log.d("Util", "failed to create directory");
+				return null;
+			}
+			else {
+				context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(routeStorageDir)));
+			}
+		}
+
+		return routeStorageDir;
+	}
+	
+	public static File getRoutePictureFile(File dir, int num) {
+		// To be safe, you should check that the SDCard is mounted
+		// using Environment.getExternalStorageState() before doing this.
+		
+		File routePictureFile = new File(dir.getPath() + File.separator + "IMG_" + num + ".jpg");
+		
+		return routePictureFile;
 	}
 	
 	/** Check if this device has a camera */
