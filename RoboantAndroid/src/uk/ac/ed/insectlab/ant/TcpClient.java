@@ -12,9 +12,10 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.util.Log;
 
-public class TcpClient {
+public class TcpClient implements NetworkControl {
 	 
 private static final int KEEP_ALIVE_INTERVAL = 10000;
 private static final String TAG = "TcpClient";
@@ -33,7 +34,9 @@ private static final String TAG = "TcpClient";
 	private long mLastKeepAlive;
     private boolean mStopped;
 	private OutputStream mOutputStream;
- 
+	private boolean mSendingPicture;
+	private Handler mHandler;
+	
     /**
      * Constructor of the class. OnMessagedReceived listens for the messages received from server
      */
@@ -46,11 +49,22 @@ private static final String TAG = "TcpClient";
      *
      * @param message text entered by client
      */
-    public void sendMessage(String message) {
-        if (mBufferOut != null && !mBufferOut.checkError()) {
-            mBufferOut.println(message);
-            mBufferOut.flush();
-        }
+    public void sendMessage(final String message) {
+    	if (!mSendingPicture) {
+	        if (mBufferOut != null && !mBufferOut.checkError()) {
+	            mBufferOut.println(message);
+	            mBufferOut.flush();
+	        }
+    	}
+    	else {
+    		Log.i(TAG, "Delaying sending message " + message);
+    		mHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					sendMessage(message);
+				}
+			}, 1000);
+    	}
     }
  
     /**
@@ -75,10 +89,11 @@ private static final String TAG = "TcpClient";
         mServerMessage = null;
     }
  
-    public void run(String serverip, int serverport) {
+    public void run(String serverip, int serverport, Handler handler) {
         mStopped = false;
         mRun = true;
- 
+        mHandler = handler;
+        
         try {
             //here you must put your computer's IP address.
             InetAddress serverAddr = InetAddress.getByName(serverip);
@@ -184,8 +199,20 @@ private static final String TAG = "TcpClient";
 		public void disconnected();
     }
 
-	public void sendPicture(RoboPicture picture) {
-		new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
+	public void sendPicture(final RoboPicture picture) {
+		if (!mSendingPicture) {
+			mSendingPicture = true;
+			new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
+		}
+		else {
+			Log.e(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
+			mHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					sendPicture(picture);
+				}
+			}, 1000);
+		}
 	}
 	
 	private class SendPictureTask extends AsyncTask<RoboPicture, Void, Void> {
@@ -209,5 +236,21 @@ private static final String TAG = "TcpClient";
 			return null;
 		}
 		
+		@Override
+		protected void onPostExecute(Void result) {
+			mHandler.postDelayed(new Runnable() {
+				@Override
+				public void run() {
+					mSendingPicture = false;
+				}
+			}, 1000);
+			super.onPostExecute(result);
+		}
+		
+	}
+
+	@Override
+	public void sendMessage(NetworkMessage message) {
+		this.sendMessage(message.getText());
 	}
 }

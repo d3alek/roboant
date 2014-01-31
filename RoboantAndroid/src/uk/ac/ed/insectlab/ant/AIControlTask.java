@@ -1,11 +1,13 @@
 package uk.ac.ed.insectlab.ant;
 
-import java.text.DecimalFormat;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
+import uk.ac.ed.insectlab.ant.NetworkControl.NetworkMessage;
+import uk.ac.ed.insectlab.ant.RoboPicture.PictureType;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -73,12 +75,14 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 	private HashSet<Point> mPixelsToCheck;
 
+	private NetworkControl mNetworkControl;
 
-	public AIControlTask(CameraControl camControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
-		this(camControl, messageView, currentStepPic, goTowardsPic, currentStepNum, goTowardsNum, progressBar, new LinkedList<Bitmap>());
+
+	public AIControlTask(CameraControl camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
+		this(camControl, networkControl, messageView, currentStepPic, goTowardsPic, currentStepNum, goTowardsNum, progressBar, new LinkedList<Bitmap>());
 	}
 
-	public AIControlTask(CameraControl camControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar, List<Bitmap> routePictures) {
+	public AIControlTask(CameraControl camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar, List<Bitmap> routePictures) {
 		Log.i(TAG, "constructor");
 		mCurrentStepNum = currentStepNum;
 		mGoTowardsNum = goTowardsNum;
@@ -89,6 +93,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		mMessageView = messageView;
 		mHandler = new Handler();
 		mRoutePictures = routePictures;
+		mNetworkControl = networkControl;
 		if (!mRoutePictures.isEmpty()) {
 			mFollowingRoute = true;
 		}
@@ -133,6 +138,8 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 				int counter = 0;
 				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
 					Log.i(TAG, "Following Route loop " + counter++);
+					
+					mNetworkControl.sendMessage(NetworkMessage.NEW_LOOK_AROUND);
 
 					mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
 
@@ -184,8 +191,11 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 				if (mStop) return null;
 
-				mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
+				mNetworkControl.sendMessage(NetworkMessage.NEW_LOOK_AROUND);
+				
+				mNetworkControl.sendPicture(new RoboPicture(mCompareToBmp, PictureType.GoTowards));
 
+				mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
 
 				mFinishedTurning = false;
 				mHandler.postDelayed(new Runnable() {
@@ -214,6 +224,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 					long time = System.currentTimeMillis();
 					Bitmap bmp = makeBitmap(takePicture(num++));
 					turnsteps.add(new TurnStep(bmp, time - startTime));
+					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, num));
 				}
 				
 				List<Bitmap> bitmap = new ArrayList<Bitmap>();

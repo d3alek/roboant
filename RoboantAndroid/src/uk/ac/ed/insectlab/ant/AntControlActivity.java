@@ -178,26 +178,13 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 								Bitmap cropped = cropCameraFromBitmap(bmp);
 								mStepTowardsPic.setImageBitmap(cropped);
-								mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
+//								if (mTcpClient != null) {
+//									mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
+//								}
 
 								//								StringBuilder str = new StringBuilder(); 
 								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
 
-								for (int i = 0; i < cropped.getWidth(); ++i) {
-									StringBuilder str = new StringBuilder(); 
-									for (int j = 0; j < cropped.getHeight(); ++j) {
-										int color = cropped.getPixel(i, j);
-										str.append("(");
-										str.append(Color.red(color));
-										str.append(",");
-										str.append(Color.green(color));
-										str.append(",");
-										str.append(Color.blue(color)); 
-										str.append(")");
-
-									}
-									Log.i(TAG, "onPictureTaken " + str.toString());
-								}
 								//								Log.i(TAG, "onPictureTaken " + str.toString());
 								//								mStepTowardsPic.setImageBitmap(bmp);
 								if (pictureFile == null){
@@ -303,7 +290,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				// Create our Preview view and set it as the content of our activity.
 				int width = getResources().getDisplayMetrics().widthPixels;
 				int height = getResources().getDisplayMetrics().heightPixels;
-				Camera.Parameters params = mCamera.getParameters();
+//				Camera.Parameters params = mCamera.getParameters();
 				//				params.setPictureSize(, 768);
 				//				params.setSceneMode(Camera.Parameters.);
 				//				params.setPreviewSize(width, height);
@@ -311,7 +298,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				//				params.setFocusMode(Camera.Parameters.);
 				//				params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_TWILIGHT);
 				//				params.setExposureCompensation(params.getMaxExposureCompensation());
-				mCamera.setParameters(params);
+//				mCamera.setParameters(params);
 
 
 				mPreview = new CameraPreview(this, mCamera);
@@ -398,7 +385,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			public void onPictureTaken(byte[] data, Camera camera) {
 				Log.i(TAG, "Picture for AIControl taken");
 				mAIControl.stepTowards(data); 
-				mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
+//				if (mTcpClient != null) {
+//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
+//				}
 				ImageView stepTowards = (ImageView)findViewById(R.id.pic_step_towards);
 				Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 				stepTowards.setImageBitmap(bmp);
@@ -592,8 +581,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				}
 			});
 
-			mTcpClient.run(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()));
-
+			mTcpClient.run(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()), handler);
 			return null;
 		}
 
@@ -700,7 +688,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 		else {
 			TextView currentStepNum = (TextView)findViewById(R.id.current_step_num);
 			TextView stepTowardsNum = (TextView)findViewById(R.id.step_towards_num);
-			mAIControl = new AIControlTask(this, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
+			mAIControl = new AIControlTask(this, mTcpClient, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
 			mAIControl.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
 		}
 
@@ -889,7 +877,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			@Override
 			public void onPictureTaken(byte[] data, Camera camera) {
 				receiver.receivePicture(data); 
-				mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
+//				if (mTcpClient != null) {
+//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
+//				}
 //				new SendPictureTask().execute(data);
 				delayedStartPreview();
 				new SaveImageTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, data);

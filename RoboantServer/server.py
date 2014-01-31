@@ -10,17 +10,19 @@ from twisted.internet.task import LoopingCall
 
 import sys
 
+
 screenWidth = 1200
 screenHeight = 800
-maxStepImages = 8 
-imageSize = screenWidth/maxStepImages
+imageHeight = screenHeight / 2
+imageWidth = int(imageHeight * 1.3)
 
 SCREEN_SIZE = (screenWidth, screenHeight)
 
-imagePosition = []
-imageWidth = screenWidth/maxStepImages
-for i in range(maxStepImages):
-    imagePosition += [(i*imageWidth, screenHeight/2.)]
+scrollX = 0
+
+def imagePosition(num):
+    global scrollX
+    return (num * imageWidth - scrollX, imageHeight)
 
 imageGoTowardsPosition = (screenWidth/2 - screenHeight/4, 0)
 picturesChanged = True
@@ -120,6 +122,16 @@ mProtocol = None
 class Images:
     GoTowards, LookAround = range(2)
 
+
+MESSAGE_NEW_LOOK_AROUND = "new_look_around"
+
+def deleteCurrentImages():
+    for fname in os.listdir('.'):
+        if fname.startswith('image_'):
+            os.remove(os.path.join('.', fname))
+    scrollX = 0
+        
+
 class AntRobotControl(LineReceiver):
     delimiter = '\n'
     imgData = ""
@@ -138,11 +150,12 @@ class AntRobotControl(LineReceiver):
                 self.imageNum = int(line.split()[-1]) 
             self.setRawMode()
             self.imgData = ""
+        if line == MESSAGE_NEW_LOOK_AROUND:
+            deleteCurrentImages()
+
     def rawDataReceived(self, data):
         global picturesChanged
-        print "Raw data"
         if data.endswith(self.pictureEnd):
-            print "Picture end found"
             self.imgData += data[:-len(self.pictureEnd)]
             f = ""
             if self.imageType == Images.LookAround:
@@ -183,10 +196,41 @@ rightDown = leftDown = False
 
 import os, re
 
+maxImageNum = 0
+
+def images_tick():
+    global imagePosition, imageGoTowardsPosition, picturesChanged, imageSize
+    global maxImageNum
+
+    images.fill(pygame.Color(0, 0, 0))
+
+    for fname in os.listdir('.'):
+        m = re.search(r'image_((-?\d+)|(go_towards))', fname)
+        if m == None:
+            continue
+        
+        maxImageNum = 0
+        imageSurface = pygame.image.load(fname)
+        if m.group(1) == 'go_towards':
+            imageSurface = pygame.transform.scale(imageSurface,
+                                                  (imageWidth, imageHeight))
+            images.blit(imageSurface, imageGoTowardsPosition)
+        else:
+            imageSurface = pygame.transform.scale(imageSurface,
+                                                  (imageWidth,imageHeight))
+            imageNum = int(m.group(1))
+            images.blit(imageSurface, imagePosition(imageNum))
+            if imageNum > maxImageNum:
+                maxImageNum = imageNum
+
+    screen.blit(images, (0, 0))
+    pygame.display.update()
+
+
 
 def events_tick():
-    global axisX, axisY, DELTA_MIN, axis4, rightDown, leftDown, imagePosition, imageGoTowardsPosition, picturesChanged, imageSize
-    screen.fill(pygame.Color(255, 255, 255)) 
+    global axisX, axisY, DELTA_MIN, axis4, rightDown, leftDown
+    global maxImageNum, scrollX, scrollingLeft, scrollingRight
     #print "IMHERE BEFORE RECV"
     #data = conn.recv(BUFFER_SIZE)
     #print "IMHERE AFTER RECV"
@@ -196,26 +240,6 @@ def events_tick():
     #print "received data:", data
 #    #conn.send(data)  # echo changeX = False changeY = False
 
-    if picturesChanged:
-        for fname in os.listdir('.'):
-            m = re.search(r'image_((-?\d+)|(go_towards))', fname)
-            if m == None:
-                continue
-            
-            print fname
-            imageSurface = pygame.image.load(fname)
-            if m.group(1) == 'go_towards':
-                imageSurface = pygame.transform.scale(imageSurface,
-                                                      (screenHeight/2, screenHeight/2))
-                images.blit(imageSurface, imageGoTowardsPosition)
-            else:
-                imageSurface = pygame.transform.scale(imageSurface, (imageSize, imageSize))
-                imageNum = int(m.group(1))
-                images.blit(imageSurface, imagePosition[imageNum])
-        picturesChanged = False
-
-    screen.blit(images, (0, 0))
-
     change4 = False
     changeX = False
 
@@ -223,6 +247,19 @@ def events_tick():
         if event.type == QUIT:
             pygame.quit()
             #conn.close()
+        elif event.type == MOUSEMOTION:
+            mousex, mousey = event.pos
+            if mousex < screenWidth / 8:
+                if mousey > screenHeight / 2:
+                    scrollingLeft = True
+            else:
+                scrollingLeft = False
+            if mousex > 7 * screenWidth / 8:
+                if mousey > screenHeight / 2:
+                    scrollingRight = True
+            else:
+                scrollingRight = False
+
         elif event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 pygame.event.post(pygame.event.Event(QUIT))
@@ -317,6 +354,17 @@ def events_tick():
     if rightDown:
         moveRightWheel(200)
     #pygame.draw.circle(screen, pygame.Color(0, 255, 0), (axisX+300, axisY+300), 20, 0)
+    if scrollingLeft:
+        if scrollX > 0:
+            scrollX -= 20
+        else:
+            scrollingLeft = False
+    elif scrollingRight:
+        if scrollX < (maxImageNum + 1.5) * imageWidth:
+            scrollX += 20
+        else:
+            scrollingRight = False
+
     pygame.display.update()
 
 lastSentRight = 0
@@ -335,6 +383,10 @@ tick.start(0.01)
 
 tick2 = LoopingCall(send_tick)
 tick2.start(0.3)
+
+tick3 = LoopingCall(images_tick)
+tick3.start(1/30.)
+
 
 reactor.run()
 
