@@ -34,9 +34,12 @@ def imagePosition(deg):
     pos = (int(pos[0]),int(pos[1]))
     return pos
 
+def imageGoTowardsPosition(pos):
+    global scrollX
+    x = screenWidth/2 - imageWidth/2 + pos * imageWidth - scrollX
+    y = screenHeight - imageHeight
+    return (x, y)
 
-
-imageGoTowardsPosition = (screenWidth/2 - imageWidth/2, screenHeight - imageHeight)
 picturesChanged = True
 
 name = 'RoboAnt'
@@ -130,19 +133,17 @@ def moveBackward(speed):
 from twisted.protocols.basic import LineReceiver
 
 mProtocol = None
-
-class Images:
-    GoTowards, LookAround = range(2)
-
+class Images: GoTowards, LookAround = range(2) 
 
 MESSAGE_NEW_LOOK_AROUND = "new_look_around"
 MESSAGE_TURN_TO = r'turn_to\s(-?\d+)' 
+MESSAGE_IMAGE = r'picture start\s(gotowards\s)?(-?\d+)' 
 
 toHighlightTurn = None 
 
 def deleteCurrentImages():
     for fname in os.listdir('.'):
-        if fname.startswith('image_'):
+        if re.search(r'image_(-?\d+)', fname):
             os.remove(os.path.join('.', fname))
     scrollX = 0
         
@@ -157,20 +158,32 @@ class AntRobotControl(LineReceiver):
     def lineReceived(self, line):
         #self.sendLine(line)
         global toHighlightTurn
-        print line
-        if line.startswith(self.pictureStart):
-            if line.endswith(self.gotowardsEnd):
+        #if line.startswith(self.pictureStart):
+            #if line.endswith(self.gotowardsEnd):
+                #self.imageType = Images.GoTowards
+            #else:
+                #self.imageType = Images.LookAround
+                #self.imageNum = int(line.split()[-1]) 
+            #self.setRawMode()
+            #self.imgData = ""
+        m = re.search(MESSAGE_IMAGE, line)
+        if m:
+            if m.group(1):
                 self.imageType = Images.GoTowards
             else:
                 self.imageType = Images.LookAround
-                self.imageNum = int(line.split()[-1]) 
+
+            self.imageNum = int(m.group(2))
             self.setRawMode()
             self.imgData = ""
+        else:
+            print line[:40]
+
         if line == MESSAGE_NEW_LOOK_AROUND:
             toHighlightTurn = None
             deleteCurrentImages()
         m = re.search(MESSAGE_TURN_TO, line)
-        if  m != None:
+        if  m:
             toHighlightTurn = int(m.group(1))
 
 
@@ -182,7 +195,7 @@ class AntRobotControl(LineReceiver):
             if self.imageType == Images.LookAround:
                 f = open('image_' + str(self.imageNum) + '.jpeg', 'wb')
             else:
-                f = open('image_go_towards.jpg', 'wb')
+                f = open('image_go_towards_' + str(self.imageNum) + '.jpeg', 'wb')
             f.write(self.imgData)
             f.close()
             self.setLineMode();
@@ -226,23 +239,24 @@ def images_tick():
     images.fill(pygame.Color(0, 0, 0))
 
     for fname in os.listdir('.'):
-        m = re.search(r'image_((-?\d+)|(go_towards))', fname)
-        if m == None:
+        m = re.search(r'image_(go_towards_)?(-?\d+)', fname)
+        if not m:
             continue
-        
+
         maxImageNum = 0
         imageSurface = pygame.image.load(fname)
-        if m.group(1) == 'go_towards':
+        imageNum = int(m.group(2))
+        if m.group(1):
             imageSurface = pygame.transform.scale(imageSurface,
                                                   (imageWidth, imageHeight))
-            images.blit(imageSurface, imageGoTowardsPosition)
+            images.blit(imageSurface, imageGoTowardsPosition(imageNum))
+            if imageNum > maxImageNum:
+                maxImageNum = imageNum
         else:
             imageSurface = pygame.transform.scale(imageSurface,
                                                   (imageWidth,imageHeight))
-            imageNum = int(m.group(1))
             images.blit(imageSurface, imagePosition(imageNum))
-            if imageNum > maxImageNum:
-                maxImageNum = imageNum
+
     screen.blit(images, (0, 0))
 
 

@@ -26,6 +26,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 	private static final int WITHIN_BEST_TO_STOP = 1;
 
 	private static final int TURN_STEP = 20;
+	private static final int TURN_FOR = 8;
 
 	private RoboAntControl mRoboAntControl;
 
@@ -116,7 +117,6 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 	}
 
 
-	int TURN_FOR = 1500;
 	private boolean mFinishedTurning;
 
 	private class TurnStep {
@@ -137,55 +137,22 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 		while (true) {
 			if (mFollowingRoute) {
-//				mBestImageNum = -1;
-//				int counter = 0;
-//				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
-//					Log.i(TAG, "Following Route loop " + counter++);
-//					
-//					mNetworkControl.sendMessage(NetworkMessage.NEW_LOOK_AROUND);
-//
-//					mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
-//
-//
-//					mFinishedTurning = false;
-//					mHandler.postDelayed(new Runnable() {
-//
-//						@Override
-//						public void run() {
-//							mRoboAntControl.setSpeeds(-TURN_SPEED, TURN_SPEED);
-//
-//							mHandler.postDelayed(new Runnable() {
-//
-//
-//								@Override
-//								public void run() {
-//									mRoboAntControl.setSpeeds(0, 0);
-//									mFinishedTurning = true;
-//								}
-//							}, 2*TURN_FOR);
-//
-//						}
-//					}, TURN_FOR);
-//
-//					ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
-//					long startTime = System.currentTimeMillis();
-//					int num = 0;
-//					while (!mFinishedTurning) {
-//						long time = System.currentTimeMillis();
-//						Bitmap bmp = makeBitmap(takePicture(num++));
-//						turnsteps.add(new TurnStep(bmp, time - startTime));
-//					}
-//					long endTime = System.currentTimeMillis();
-//					
-//					Log.i(TAG, "Runnning for " + (endTime - startTime));
-//					
-//					moveTowardsMin(turnsteps, mRoutePictures, endTime - startTime);
-//					Log.i(TAG, "Within " + (mRoutePictures.size() - mBestImageNum) + " of end");
-//				}
-//
-//				Log.i(TAG, "Follow route finished");
-//				publishProgress("Follow route finished");
-//				mFollowingRoute = false;
+				int counter = 0;
+
+				for (int i = 0; i < mRoutePictures.size(); ++i) {
+					Bitmap bmp = mRoutePictures.get(i);
+					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.GoTowards, i));
+				}
+
+				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
+					Log.i(TAG, "Following Route loop " + counter++);
+					ArrayList<TurnStep> turnsteps = lookAround();
+					moveTowardsMin(turnsteps, mRoutePictures);
+					Log.i(TAG, "Within " + (mRoutePictures.size() - mBestImageNum) + " of end");
+				}
+				Log.i(TAG, "Follow route finished");
+				publishProgress("Follow route finished");
+				mFollowingRoute = false;
 			}
 			else {
 				Log.i(TAG, "Wait lock");
@@ -194,94 +161,56 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 				if (mStop) return null;
 
-				mNetworkControl.sendMessage(NetworkControl.NEW_LOOK_AROUND);
-				
-				mNetworkControl.sendPicture(new RoboPicture(mCompareToBmp, PictureType.GoTowards));
-				
-				mRoboAntControl.setDirectionZero();
+				mNetworkControl.sendPicture(new RoboPicture(mCompareToBmp, PictureType.GoTowards, 0));
 
-				
-				int toFace = 0;
-				int turnFor = 8;
-				
-				int dir = 1;
-				
-				int threshold = 5;
-				
-				ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
-				
-				for (int turn = 0; turn < turnFor; ++turn) {
-					if (turn == turnFor/2) {
-						dir = -1;
-						mRoboAntControl.doTurn(-(turn)*TURN_STEP, this);
-						waitLock();
-						Bitmap bmp = makeBitmap(takePicture(turn));
-						turnsteps.add(new TurnStep(bmp, turn));
-						mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, 0));
-						continue;
-					}
-					int target;
-					if (dir > 0 ) {
-						target = (turn + 1)*TURN_STEP;
-					}
-					else {
-						target = -(turn - turnFor/2) * TURN_STEP;
-					}
-					Log.i(TAG, "Turn " + turn + " aimAngle " + TURN_STEP);
-
-					mRoboAntControl.doTurn(dir*TURN_STEP, this);
-					waitLock();
-
-//					mRoboAntControl.setSpeeds(0, 0);
-					
-					Bitmap bmp = makeBitmap(takePicture(turn));
-					turnsteps.add(new TurnStep(bmp, target));
-					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, target));
-				}
-				
-				mRoboAntControl.doTurn((turnFor/2-1)*TURN_STEP, this);
-				waitLock();
-					
-
-//				mFinishedTurning = false;
-//				mHandler.postDelayed(new Runnable() {
-//
-//					@Override
-//					public void run() {
-//						mRoboAntControl.setSpeeds(-TURN_SPEED, TURN_SPEED);
-//
-//						mHandler.postDelayed(new Runnable() {
-//
-//
-//							@Override
-//							public void run() {
-//								mRoboAntControl.setSpeeds(0, 0);
-//								mFinishedTurning = true;
-//							}
-//						}, 2*TURN_FOR);
-//
-//					}
-//				}, TURN_FOR);
-
-//				ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
-//				long startTime = System.currentTimeMillis();
-//				int num = 0;
-//				while (!mFinishedTurning) {
-//					long time = System.currentTimeMillis();
-//					Bitmap bmp = makeBitmap(takePicture(num++));
-//					turnsteps.add(new TurnStep(bmp, time - startTime));
-//					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, num));
-//				}
+				ArrayList<TurnStep> turnsteps = lookAround();
 				
 				List<Bitmap> bitmap = new ArrayList<Bitmap>();
 				bitmap.add(mCompareToBmp);
-//				long endTime = System.currentTimeMillis();
-				
-//				Log.i(TAG, "Runnning for " + (endTime - startTime));
 				
 				moveTowardsMin(turnsteps, bitmap);
+				
 			}
 		}
+	}
+	
+	private ArrayList<TurnStep> lookAround() {
+		mNetworkControl.sendMessage(NetworkControl.NEW_LOOK_AROUND);
+		
+		int dir = 1;
+		
+		ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
+		
+		for (int turn = 0; turn < TURN_FOR; ++turn) {
+			if (turn == TURN_FOR/2) {
+				dir = -1;
+				mRoboAntControl.doTurn(-(turn)*TURN_STEP, this);
+				waitLock();
+				Bitmap bmp = makeBitmap(takePicture(turn));
+				turnsteps.add(new TurnStep(bmp, turn));
+				mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, 0));
+				continue;
+			}
+			int target;
+			if (dir > 0 ) {
+				target = (turn + 1)*TURN_STEP;
+			}
+			else {
+				target = -(turn - TURN_FOR/2) * TURN_STEP;
+			}
+			Log.i(TAG, "Turn " + turn + " aimAngle " + TURN_STEP);
+
+			mRoboAntControl.doTurn(dir*TURN_STEP, this);
+			waitLock();
+			
+			Bitmap bmp = makeBitmap(takePicture(turn));
+			turnsteps.add(new TurnStep(bmp, target));
+			mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, target));
+		}
+		
+		mRoboAntControl.doTurn((TURN_FOR/2-1)*TURN_STEP, this);
+		waitLock();
+		return turnsteps;
 	}
 	
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards) {
@@ -371,18 +300,18 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 //		waitLock();
 //		Log.i(TAG, "Facing the correct direction!");
 //
-//		mRoboAntControl.setSpeeds(TURN_SPEED, TURN_SPEED);
-//		mHandler.postDelayed(new Runnable() {
-//
-//			@Override
-//			public void run() {
-//				mRoboAntControl.setSpeeds(0, 0);
-//				synchronized (lock) {
-//					lock.notify();
-//				}
-//			}
-//		}, TURN_FOR);
-//		waitLock();
+		mRoboAntControl.setSpeeds(100, 100);
+		mHandler.postDelayed(new Runnable() {
+
+			@Override
+			public void run() {
+				mRoboAntControl.setSpeeds(0, 0);
+				synchronized (lock) {
+					lock.notify();
+				}
+			}
+		}, 2000);
+		waitLock();
 	}
 
 	private Bitmap makeBitmap(byte[] rawJPEG) {

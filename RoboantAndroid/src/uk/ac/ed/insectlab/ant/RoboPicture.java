@@ -14,9 +14,9 @@ public class RoboPicture {
 	PictureType type;
 	int pictureNum = -1;
 	
-	public RoboPicture(byte[] data, PictureType gotowards) {
-		this(data, gotowards, -1);
-	}
+//	public RoboPicture(byte[] data, PictureType gotowards) {
+//		this(data, gotowards, -1);
+//	}
 	public RoboPicture(byte[] data, PictureType lookaround, int pictureNum) {
 		this.data = data; this.type = lookaround; this.pictureNum = pictureNum;
 	}
@@ -25,9 +25,9 @@ public class RoboPicture {
 		this(bitmapToByteArray(bmp), lookaround, pictureNum);
 	}
 	
-	public RoboPicture(Bitmap bmp, PictureType gotowards) {
-		this(bitmapToByteArray(bmp), gotowards);
-	}
+//	public RoboPicture(Bitmap bmp, PictureType gotowards) {
+//		this(bitmapToByteArray(bmp), gotowards);
+//	}
 	
 	public static byte[] bitmapToByteArray(Bitmap bmp) {
 		ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -37,7 +37,7 @@ public class RoboPicture {
 	@Override
 	public String toString() {
 		switch (type) {
-		case GoTowards: return "gotowards";
+		case GoTowards: return "gotowards " + pictureNum;
 		default:
 			return pictureNum + "";
 		}
