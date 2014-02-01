@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import uk.ac.ed.insectlab.ant.RoboPicture.PictureType;
 import uk.ac.ed.insectlab.ant.RouteSelectionDialogFragment.RouteSelectedListener;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
@@ -21,13 +20,14 @@ import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SyncRequest;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Color;
 import android.hardware.Camera;
 import android.hardware.Camera.AutoFocusCallback;
+import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PictureCallback;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.AsyncTask;
@@ -142,6 +142,12 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 
 	private CameraOverlay mCameraOverlay;
 
+	private SensorManager mSensorManager;
+
+	private Sensor accelerometer;
+
+	private Sensor magnetometer;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -178,9 +184,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 								Bitmap cropped = cropCameraFromBitmap(bmp);
 								mStepTowardsPic.setImageBitmap(cropped);
-//								if (mTcpClient != null) {
-//									mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
-//								}
+								//								if (mTcpClient != null) {
+								//									mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
+								//								}
 
 								//								StringBuilder str = new StringBuilder(); 
 								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
@@ -290,15 +296,17 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				// Create our Preview view and set it as the content of our activity.
 				int width = getResources().getDisplayMetrics().widthPixels;
 				int height = getResources().getDisplayMetrics().heightPixels;
-//				Camera.Parameters params = mCamera.getParameters();
+				Camera.Parameters params = mCamera.getParameters();
+
+
 				//				params.setPictureSize(, 768);
 				//				params.setSceneMode(Camera.Parameters.);
 				//				params.setPreviewSize(width, height);
 				//				params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
 				//				params.setFocusMode(Camera.Parameters.);
 				//				params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_TWILIGHT);
-				//				params.setExposureCompensation(params.getMaxExposureCompensation());
-//				mCamera.setParameters(params);
+				params.setExposureCompensation(params.getMaxExposureCompensation());
+				mCamera.setParameters(params);
 
 
 				mPreview = new CameraPreview(this, mCamera);
@@ -331,6 +339,10 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 				}, 2000);
 			}
 		}
+
+		mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+		accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+		magnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
 	}
 
 	private void showRouteSelectionDialog() {
@@ -385,9 +397,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			public void onPictureTaken(byte[] data, Camera camera) {
 				Log.i(TAG, "Picture for AIControl taken");
 				mAIControl.stepTowards(data); 
-//				if (mTcpClient != null) {
-//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
-//				}
+				//				if (mTcpClient != null) {
+				//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
+				//				}
 				ImageView stepTowards = (ImageView)findViewById(R.id.pic_step_towards);
 				Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
 				stepTowards.setImageBitmap(bmp);
@@ -577,6 +589,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 							mServerPort.setEnabled(false);
 						}
 					});
+					if (mAIControl != null) {
+						mAIControl.setNetworkControl(mTcpClient);
+					}
 					handler.removeCallbacks(mConnectorRunnable);
 				}
 			});
@@ -688,7 +703,23 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 		else {
 			TextView currentStepNum = (TextView)findViewById(R.id.current_step_num);
 			TextView stepTowardsNum = (TextView)findViewById(R.id.step_towards_num);
-			mAIControl = new AIControlTask(this, mTcpClient, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
+			if (mTcpClient == null) {
+				NetworkControl dummy = new NetworkControl() {
+					@Override
+					public void sendPicture(RoboPicture roboPicture) {
+						Log.i(TAG, "Ignore sendPicture " + roboPicture.pictureNum);
+					}
+
+					@Override
+					public void sendMessage(String message) {
+						Log.i(TAG, "Ignore sendMessage " + message);
+					}
+				};
+				mAIControl = new AIControlTask(this, dummy, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
+			}
+			else {
+				mAIControl = new AIControlTask(this, mTcpClient, mAIMessage, mCurrentStepPic, mStepTowardsPic, currentStepNum, stepTowardsNum, mTrackProgressBar, mRoutePictures);
+			}
 			mAIControl.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboAntControl);
 		}
 
@@ -739,6 +770,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 	@Override
 	protected void onPause() {
 		super.onPause();
+		mSensorManager.unregisterListener(mRoboAntControl);
 		this.mWakeLock.release();
 		stopIoManager();
 		if (sDriver != null) {
@@ -763,6 +795,7 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 	@Override
 	protected void onResume() {
 		super.onResume();
+
 		Log.d(TAG, "Resumed, sDriver=" + sDriver);
 		if (sDriver == null) {
 			//            mTitleTextView.setText("No serial device.");
@@ -805,6 +838,9 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			mSerialIoManager = new SerialInputOutputManager(sDriver, mListener);
 			mExecutor.submit(mSerialIoManager);
 			mRoboAntControl = new RoboAntControl(mSerialIoManager);
+			mRoboAntControl.setCompassView((TextView)findViewById(R.id.compass_view));
+			mSensorManager.registerListener(mRoboAntControl, accelerometer, SensorManager.SENSOR_DELAY_UI);
+			mSensorManager.registerListener(mRoboAntControl, magnetometer, SensorManager.SENSOR_DELAY_UI);
 			//            mAIControl = new AIControlTask(this, mAIMessage);
 			//            mAIControl.execute(mRoboAntControl);
 		}
@@ -877,10 +913,10 @@ public class AntControlActivity extends Activity implements CameraControl, Route
 			@Override
 			public void onPictureTaken(byte[] data, Camera camera) {
 				receiver.receivePicture(data); 
-//				if (mTcpClient != null) {
-//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
-//				}
-//				new SendPictureTask().execute(data);
+				//				if (mTcpClient != null) {
+				//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
+				//				}
+				//				new SendPictureTask().execute(data);
 				delayedStartPreview();
 				new SaveImageTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, data);
 			}

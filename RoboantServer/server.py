@@ -13,18 +13,30 @@ import sys
 
 screenWidth = 1200
 screenHeight = 800
-imageHeight = screenHeight / 2
+imageHeight = screenHeight / 3
 imageWidth = int(imageHeight * 1.3)
 
 SCREEN_SIZE = (screenWidth, screenHeight)
+SPHERE_RAD = 400
 
 scrollX = 0
 
-def imagePosition(num):
-    global scrollX
-    return (num * imageWidth - scrollX, imageHeight)
+#def imagePosition(num):
+    #global scrollX
+    #return (num * imageWidth - scrollX, imageHeight)
 
-imageGoTowardsPosition = (screenWidth/2 - screenHeight/4, 0)
+import numpy as np
+
+def imagePosition(deg):
+    global scrollX, SPHERE_RAD
+    deg = 4*deg/3
+    pos = (screenWidth/2 - imageWidth/2 + np.sin(np.radians(deg))*SPHERE_RAD, screenHeight/2-np.cos(np.radians(deg))*SPHERE_RAD)
+    pos = (int(pos[0]),int(pos[1]))
+    return pos
+
+
+
+imageGoTowardsPosition = (screenWidth/2 - imageWidth/2, screenHeight - imageHeight)
 picturesChanged = True
 
 name = 'RoboAnt'
@@ -124,6 +136,9 @@ class Images:
 
 
 MESSAGE_NEW_LOOK_AROUND = "new_look_around"
+MESSAGE_TURN_TO = r'turn_to\s(-?\d+)' 
+
+toHighlightTurn = None 
 
 def deleteCurrentImages():
     for fname in os.listdir('.'):
@@ -141,6 +156,7 @@ class AntRobotControl(LineReceiver):
 
     def lineReceived(self, line):
         #self.sendLine(line)
+        global toHighlightTurn
         print line
         if line.startswith(self.pictureStart):
             if line.endswith(self.gotowardsEnd):
@@ -151,7 +167,12 @@ class AntRobotControl(LineReceiver):
             self.setRawMode()
             self.imgData = ""
         if line == MESSAGE_NEW_LOOK_AROUND:
+            toHighlightTurn = None
             deleteCurrentImages()
+        m = re.search(MESSAGE_TURN_TO, line)
+        if  m != None:
+            toHighlightTurn = int(m.group(1))
+
 
     def rawDataReceived(self, data):
         global picturesChanged
@@ -199,8 +220,8 @@ import os, re
 maxImageNum = 0
 
 def images_tick():
-    global imagePosition, imageGoTowardsPosition, picturesChanged, imageSize
-    global maxImageNum
+    global imageGoTowardsPosition, picturesChanged, imageSize
+    global maxImageNum, toHighlightTurn
 
     images.fill(pygame.Color(0, 0, 0))
 
@@ -222,10 +243,18 @@ def images_tick():
             images.blit(imageSurface, imagePosition(imageNum))
             if imageNum > maxImageNum:
                 maxImageNum = imageNum
-
     screen.blit(images, (0, 0))
+
+
+    if toHighlightTurn != None:
+        pos = imagePosition(toHighlightTurn)
+        pos = (pos[0] + imageWidth/2, pos[1] + imageHeight/2)
+        pygame.draw.circle(screen, pygame.Color(255, 0, 0), pos, 20, 0)
+
+
     pygame.display.update()
 
+scrollingLeft = scrollingRight = False
 
 
 def events_tick():

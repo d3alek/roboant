@@ -238,5 +238,13 @@ camera.startPreview();
         //return _bmp;
         return output;
     }
+
+//	public static int compareAngles(int deg1, int deg2) {
+//		if (Math.abs(deg1 - deg2) >= 180) {
+//			if (deg1 < 0) {
+//			}
+//		}
+//		return 0;
+//	}
 	
 }

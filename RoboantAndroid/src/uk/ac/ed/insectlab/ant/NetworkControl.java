@@ -2,19 +2,9 @@ package uk.ac.ed.insectlab.ant;
 
 
 public interface NetworkControl {
-	public enum NetworkMessage {
-		NEW_LOOK_AROUND("new_look_around");
-		
-		private String text;
+	public static final String NEW_LOOK_AROUND  = "new_look_around";
+	public static final String TURN_TO = "turn_to ";
 
-		NetworkMessage(String string) {
-			text = string;
-		}
-		
-		public String getText() {
-			return text;
-		}
-	}
-	public void sendMessage(NetworkMessage message);
+	public void sendMessage(String message);
 	public void sendPicture(RoboPicture roboPicture);
 }

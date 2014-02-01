@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent" >
-    
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -12,29 +12,27 @@
             android:id="@+id/camera_preview"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-        
-        <uk.ac.ed.insectlab.ant.CameraOverlay
-        android:id="@+id/camera_overlay"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        />
 
-        <Button 
+        <uk.ac.ed.insectlab.ant.CameraOverlay
+            android:id="@+id/camera_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <Button
             android:id="@+id/btn_record"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
             android:layout_alignParentBottom="true"
-            android:text="Capture"/>
+            android:layout_centerHorizontal="true"
+            android:text="Capture" />
     </RelativeLayout>
-    
 
     <LinearLayout
+        android:id="@+id/serverInfo"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:id="@+id/serverInfo"
-        android:layout_alignParentTop="true" >
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal" >
 
         <EditText
             android:id="@+id/serverIP"
@@ -84,15 +82,15 @@
         android:id="@+id/rightLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Right"
-        android:layout_below="@+id/leftSlider" />
+        android:layout_below="@+id/leftSlider"
+        android:text="Right" />
 
     <RelativeLayout
         android:id="@+id/rightSlider"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_below="@+id/rightLabel" >
+        android:layout_below="@+id/rightLabel"
+        android:orientation="horizontal" >
 
         <EditText
             android:id="@+id/rightValue"
@@ -108,68 +106,77 @@
             android:layout_toRightOf="@id/rightValue"
             android:max="400" />
     </RelativeLayout>
-    
-    <Button 
+
+    <Button
         android:id="@+id/btn_take_picture"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"
-        android:text="Take picture"/>
-    
-    <TextView 
+        android:text="Take picture" />
+
+    <TextView
         android:id="@+id/ai_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:textSize="32sp"/>
-    
-    <ImageView 
+        android:textSize="32sp" />
+
+    <ImageView
         android:id="@+id/pic_step_towards"
         android:layout_width="300dp"
         android:layout_height="230dp"
         android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true"/>
-    <TextView 
+        android:layout_centerHorizontal="true" />
+
+    <TextView
         android:id="@+id/step_towards_num"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="32sp"
         android:layout_centerInParent="true"
         android:paddingBottom="100dp"
-        android:textColor="@android:color/holo_orange_dark"/>
+        android:textColor="@android:color/holo_orange_dark"
+        android:textSize="32sp" />
+
     <ImageView
         android:id="@+id/pic_current_step"
         android:layout_width="300dp"
         android:layout_height="230dp"
         android:layout_below="@+id/pic_step_towards"
-        android:layout_centerHorizontal="true"
-        />
-    <TextView 
+        android:layout_centerHorizontal="true" />
+
+    <TextView
         android:id="@+id/current_step_num"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="32sp"
         android:layout_centerInParent="true"
         android:paddingTop="100dp"
-        android:textColor="@android:color/holo_orange_dark"/>
+        android:textColor="@android:color/holo_orange_dark"
+        android:textSize="32sp" />
         />
-    
-    <TextView 
+
+    <TextView
         android:id="@+id/path_recording"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:gravity="center_horizontal"
         android:text="Recording path"
-        android:textSize="32sp"/>
+        android:textSize="32sp" />
 
     <ProgressBar
-        style="@android:style/Widget.Holo.ProgressBar.Horizontal"
         android:id="@+id/track_proress"
+        style="@android:style/Widget.Holo.ProgressBar.Horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"/>
+        android:layout_centerInParent="true" />
     
-    
+    <TextView 
+        android:id="@+id/compass_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="32sp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentRight="true"/>
+
 </RelativeLayout>

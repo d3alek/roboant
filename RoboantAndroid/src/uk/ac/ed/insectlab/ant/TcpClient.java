@@ -202,10 +202,11 @@ private static final String TAG = "TcpClient";
 	public void sendPicture(final RoboPicture picture) {
 		if (!mSendingPicture) {
 			mSendingPicture = true;
+			Log.i(TAG, "Sending picture " + picture.pictureNum);
 			new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
 		}
 		else {
-			Log.e(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
+			Log.i(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
 			mHandler.postDelayed(new Runnable() {
 				@Override
 				public void run() {
@@ -247,10 +248,5 @@ private static final String TAG = "TcpClient";
 			super.onPostExecute(result);
 		}
 		
-	}
-
-	@Override
-	public void sendMessage(NetworkMessage message) {
-		this.sendMessage(message.getText());
 	}
 }
