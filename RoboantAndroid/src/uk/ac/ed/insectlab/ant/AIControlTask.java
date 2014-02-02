@@ -270,6 +270,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 		int turnTo = turnsteps.get(minStep).deg;
 		mNetworkControl.sendMessage(NetworkControl.TURN_TO + turnTo);
+		mNetworkControl.sendMessage(NetworkControl.ROUTE_MATCH + minRouteStep);
 		
 		Log.i(TAG, "Turning to " + turnTo);
 		
@@ -277,29 +278,6 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		
 		waitLock();
 
-//		mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
-//
-//		long minTime = turnsteps.get(mCurrentStepToPublish).time;
-//		
-//		long oneDirectionTurnFor = ranFor / 2;
-//
-//		long turnFor = minTime < oneDirectionTurnFor ? oneDirectionTurnFor + minTime : 2 * oneDirectionTurnFor - minTime;
-//
-//		Log.i(TAG, "minTime is " + minTime + " turnFor " + turnFor);
-//
-//		mHandler.postDelayed(new Runnable() {
-//
-//			@Override
-//			public void run() {
-//				mRoboAntControl.setSpeeds(0, 0);
-//				synchronized (lock) {
-//					lock.notify();
-//				}
-//			}
-//		}, turnFor);
-//		waitLock();
-//		Log.i(TAG, "Facing the correct direction!");
-//
 		mRoboAntControl.setSpeeds(100, 100);
 		mHandler.postDelayed(new Runnable() {
 

@@ -61,7 +61,7 @@ public class TcpClient implements NetworkControl {
 		}
 		else {
 			Log.i(TAG, "Delaying sending message " + message);
-			mSendingQueue.add(new Runnable() {
+			mSendingQueue.addFirst(new Runnable() {
 				@Override
 				public void run() {
 					sendMessage(message);
@@ -222,7 +222,7 @@ public class TcpClient implements NetworkControl {
 		}
 		else {
 			Log.i(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
-			mSendingQueue.add(new Runnable() {
+			mSendingQueue.addFirst(new Runnable() {
 				@Override
 				public void run() {
 					sendPicture(picture);

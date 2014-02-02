@@ -21,7 +21,7 @@ public class RoboAntControl implements SensorEventListener {
 
 	private static final long WRITE_INTERVAL = 25; // min 25
 	private static final String TAG = "RoboAntControl";
-	private static final int DIR_THRESHOLD = 5;
+	private static final int DIR_THRESHOLD = 8;
 
 	int TURN_SPEED = 80;
 
@@ -123,7 +123,7 @@ public class RoboAntControl implements SensorEventListener {
 				azimut = orientation[0]; // orientation contains: azimut, pitch and roll
 				
 				if (mControl != null) {
-//					Log.i(TAG, "Dir is " + getDirection() + " target is " + mTargetDirection);
+					Log.i(TAG, "Dir is " + getDirection() + " target is " + mTargetDirection);
 //					int offset = getDirection() - mTargetDirection;
 					int relativeHeading = relativeHeading(getDirection(), mTargetDirection);
 

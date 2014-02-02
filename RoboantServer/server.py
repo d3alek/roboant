@@ -36,7 +36,8 @@ def imagePosition(deg):
 
 def imageGoTowardsPosition(pos):
     global scrollX
-    x = screenWidth/2 - imageWidth/2 + pos * imageWidth - scrollX
+    #x = screenWidth/2 - imageWidth/2 + pos * imageWidth - scrollX
+    x = pos * imageWidth - scrollX
     y = screenHeight - imageHeight
     return (x, y)
 
@@ -138,8 +139,10 @@ class Images: GoTowards, LookAround = range(2)
 MESSAGE_NEW_LOOK_AROUND = "new_look_around"
 MESSAGE_TURN_TO = r'turn_to\s(-?\d+)' 
 MESSAGE_IMAGE = r'picture start\s(gotowards\s)?(-?\d+)' 
+MESSAGE_ROUTE_MATCH = r'route_match\s(\d+)'
 
 toHighlightTurn = None 
+toHighlightRoute = None 
 
 def deleteCurrentImages():
     for fname in os.listdir('.'):
@@ -157,7 +160,7 @@ class AntRobotControl(LineReceiver):
 
     def lineReceived(self, line):
         #self.sendLine(line)
-        global toHighlightTurn
+        global toHighlightTurn, toHighlightRoute
         #if line.startswith(self.pictureStart):
             #if line.endswith(self.gotowardsEnd):
                 #self.imageType = Images.GoTowards
@@ -178,6 +181,11 @@ class AntRobotControl(LineReceiver):
             self.imgData = ""
         else:
             print line[:40]
+
+        m = re.search(MESSAGE_ROUTE_MATCH, line)
+        if m:
+            toHighlightRoute = int(m.group(1))
+            print 'Route match ', str(toHighlightRoute)
 
         if line == MESSAGE_NEW_LOOK_AROUND:
             toHighlightTurn = None
@@ -234,7 +242,7 @@ maxImageNum = 0
 
 def images_tick():
     global imageGoTowardsPosition, picturesChanged, imageSize
-    global maxImageNum, toHighlightTurn
+    global maxImageNum, toHighlightTurn, toHighlightRoute
 
     images.fill(pygame.Color(0, 0, 0))
 
@@ -264,6 +272,11 @@ def images_tick():
         pos = imagePosition(toHighlightTurn)
         pos = (pos[0] + imageWidth/2, pos[1] + imageHeight/2)
         pygame.draw.circle(screen, pygame.Color(255, 0, 0), pos, 20, 0)
+
+    if toHighlightRoute != None:
+        pos = imageGoTowardsPosition(toHighlightRoute)
+        pos = (pos[0] + imageWidth/2, pos[1] + imageHeight/2)
+        pygame.draw.circle(screen, pygame.Color(0, 255, 0), pos, 20, 0)
 
 
     pygame.display.update()
@@ -403,7 +416,7 @@ def events_tick():
         else:
             scrollingLeft = False
     elif scrollingRight:
-        if scrollX < (maxImageNum + 1.5) * imageWidth:
+        if scrollX < (maxImageNum + 3.5) * imageWidth:
             scrollX += 20
         else:
             scrollingRight = False
