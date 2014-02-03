@@ -30,7 +30,6 @@ public class SaveRecordedRouteTask extends AsyncTask<List<Bitmap>, Void, Void> {
 				FileOutputStream out = new FileOutputStream(picture);
 				bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out);
 				out.close();
-				bitmap.recycle();
 			} catch(IOException e) {
 				e.printStackTrace();
 			}

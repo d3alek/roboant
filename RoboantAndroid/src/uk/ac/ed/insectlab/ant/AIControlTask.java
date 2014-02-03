@@ -7,10 +7,10 @@ import java.util.List;
 
 import uk.ac.ed.insectlab.ant.RoboPicture.PictureType;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -19,26 +19,27 @@ import android.widget.TextView;
 
 public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> implements CameraReceiver, LookAroundListener {
 
-	private static final int TURNING_SPEED = 200;
 
 	protected static final String TAG = "AIControlTask";
 
 	private static final int WITHIN_BEST_TO_STOP = 1;
 
 	private static final int TURN_STEP = 20;
-	private static final int TURN_FOR = 8;
+	private static final int TURN_FOR = 7;
+
+	private static final int TURN_SPEED = 100;
+
+	double OPTIC_FLOW_TURN = 100/360.;
 
 	private RoboAntControl mRoboAntControl;
 
 	LinkedList<byte[]> mReceivedPictures = new LinkedList<byte[]>();
 
-	Handler mHandler;
-
 	String lock = "lock";
 
-	private CameraControl mCameraControl;
+	private OpenCVCamera mCameraControl;
 
-	private byte[] mCompareTo;
+	//	private byte[] mCompareTo;
 
 	private TextView mMessageView;
 
@@ -79,11 +80,11 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 	private NetworkControl mNetworkControl;
 
 
-	public AIControlTask(CameraControl camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
+	public AIControlTask(OpenCVCamera camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
 		this(camControl, networkControl, messageView, currentStepPic, goTowardsPic, currentStepNum, goTowardsNum, progressBar, new LinkedList<Bitmap>());
 	}
 
-	public AIControlTask(CameraControl camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar, List<Bitmap> routePictures) {
+	public AIControlTask(OpenCVCamera camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar, List<Bitmap> routePictures) {
 		Log.i(TAG, "constructor");
 		mCurrentStepNum = currentStepNum;
 		mGoTowardsNum = goTowardsNum;
@@ -92,14 +93,13 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		mGoTowardsPic = goTowardsPic;
 		mCameraControl = camControl;
 		mMessageView = messageView;
-		mHandler = new Handler();
 		mRoutePictures = routePictures;
 		mNetworkControl = networkControl;
 		if (!mRoutePictures.isEmpty()) {
 			mFollowingRoute = true;
 		}
 	}
-	
+
 	public void setNetworkControl(NetworkControl control) {
 		mNetworkControl = control;
 	}
@@ -129,10 +129,43 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		}
 	}
 
+	double mTotalFlow;
+
+	private HandlerThread mHandlerThread;
+
+	private Handler mHandler;
+
+
 	@Override
 	protected Void doInBackground(RoboAntControl... params) {
 		Log.i(TAG, "doInBackground");
+
+		mHandlerThread = new HandlerThread("ai_control_handler");
+		mHandlerThread.start();
+
+		while(!mHandlerThread.isAlive()) {};  
+		mHandler = new Handler(mHandlerThread.getLooper(), null);
+
 		mRoboAntControl = params[0];
+
+		//		mRoboAntControl.setSpeeds(-80, 80);
+		//		
+		//		mTotalFlow = 0;
+		//		
+		//		mCameraControl.setFlowListener(new OpenCVCamera.FlowListener() {
+		//			
+		//			@Override
+		//			public boolean flowChanged(double flow) {
+		//				mTotalFlow += flow;
+		//				Log.i(TAG, "mTotalFlow " + mTotalFlow);
+		//				if (mTotalFlow > 600) {
+		//					mRoboAntControl.setSpeeds(0, 0);
+		//					return false;
+		//				}
+		//				return true;
+		//			}
+		//		});
+
 
 
 		while (true) {
@@ -164,30 +197,37 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 				mNetworkControl.sendPicture(new RoboPicture(mCompareToBmp, PictureType.GoTowards, 0));
 
 				ArrayList<TurnStep> turnsteps = lookAround();
-				
+
 				List<Bitmap> bitmap = new ArrayList<Bitmap>();
 				bitmap.add(mCompareToBmp);
-				
+
 				moveTowardsMin(turnsteps, bitmap);
-				
+
 			}
 		}
 	}
-	
+
 	private ArrayList<TurnStep> lookAround() {
+		Log.i(TAG, "Starting look around");
 		mNetworkControl.sendMessage(NetworkControl.NEW_LOOK_AROUND);
-		
+
 		int dir = 1;
-		
+
 		ArrayList<TurnStep> turnsteps = new ArrayList<TurnStep>();
-		
+
 		for (int turn = 0; turn < TURN_FOR; ++turn) {
 			if (turn == TURN_FOR/2) {
 				dir = -1;
-				mRoboAntControl.doTurn(-(turn)*TURN_STEP, this);
-				waitLock();
-				Bitmap bmp = makeBitmap(takePicture(turn));
-				turnsteps.add(new TurnStep(bmp, turn));
+				doTurn(-(turn+1)*TURN_STEP);
+				//				mRoboAntControl.doTurn(-(turn)*TURN_STEP, this);
+				//				waitLock();
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				Bitmap bmp = takePicture();
+				turnsteps.add(new TurnStep(bmp, 0));
 				mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, 0));
 				continue;
 			}
@@ -198,23 +238,63 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 			else {
 				target = -(turn - TURN_FOR/2) * TURN_STEP;
 			}
-			Log.i(TAG, "Turn " + turn + " aimAngle " + TURN_STEP);
+			Log.i(TAG, "Turn " + turn + " aimAngle " + target);
 
-			mRoboAntControl.doTurn(dir*TURN_STEP, this);
-			waitLock();
-			
-			Bitmap bmp = makeBitmap(takePicture(turn));
+			//			mRoboAntControl.doTurn(dir*TURN_STEP, this);
+			//			waitLock();
+
+			doTurn(dir*TURN_STEP);
+
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+			Bitmap bmp = takePicture();
 			turnsteps.add(new TurnStep(bmp, target));
 			mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, target));
 		}
-		
-		mRoboAntControl.doTurn((TURN_FOR/2-1)*TURN_STEP, this);
-		waitLock();
+
+		//		mRoboAntControl.doTurn((TURN_FOR/2-1)*TURN_STEP, this);
+		//		waitLock();
+		doTurn((TURN_FOR/2 + 1)*TURN_STEP);
 		return turnsteps;
 	}
-	
+
+	private void doTurn(final int angle) {
+		if (angle > 0) {
+			mRoboAntControl.setSpeeds(TURN_SPEED, -TURN_SPEED);
+		}
+		else {
+			mRoboAntControl.setSpeeds(-TURN_SPEED, TURN_SPEED);
+		}
+
+		mTotalFlow = 0;
+
+		mCameraControl.setFlowListener(new OpenCVCamera.FlowListener() {
+			@Override
+			public boolean flowChanged(double flow) {
+				mTotalFlow += flow;
+				Log.i(TAG, "mTotalFlow " + mTotalFlow + " aim is "+  Math.abs(angle * OPTIC_FLOW_TURN));
+				if (mTotalFlow > Math.abs(angle * OPTIC_FLOW_TURN)) {
+					mRoboAntControl.setSpeeds(0, 0);
+					synchronized (lock) {
+						lock.notify();
+					}
+					return false;
+				}
+				return true;
+			}
+		});
+
+		waitLock();
+
+	}
+
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards) {
-		
+
 		Log.i(TAG, "Turn pictures: " + turnsteps.size() + " moveTowards pictures " + moveTowards.size());
 
 		int picNum;
@@ -265,40 +345,36 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		mCurrentStepToPublish = minStep;
 		mGoTowardsToPublish = minRouteStep;
 		mBestImageNum = minRouteStep;
-		
+
 		publishProgress("Going towards " + minStep + "\nDist:"+minTurnDist);
 
 		int turnTo = turnsteps.get(minStep).deg;
 		mNetworkControl.sendMessage(NetworkControl.TURN_TO + turnTo);
 		mNetworkControl.sendMessage(NetworkControl.ROUTE_MATCH + minRouteStep);
-		
+
 		Log.i(TAG, "Turning to " + turnTo);
-		
-		mRoboAntControl.doTurn(turnTo, this);
-		
-		waitLock();
+
+		//		mRoboAntControl.doTurn(turnTo, this);
+		doTurn(turnTo);
 
 		mRoboAntControl.setSpeeds(100, 100);
-		mHandler.postDelayed(new Runnable() {
 
-			@Override
-			public void run() {
-				mRoboAntControl.setSpeeds(0, 0);
-				synchronized (lock) {
-					lock.notify();
-				}
-			}
-		}, 2000);
-		waitLock();
+		try {
+			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		mRoboAntControl.setSpeeds(0, 0);
 	}
 
-	private Bitmap makeBitmap(byte[] rawJPEG) {
-		Bitmap bmp =  BitmapFactory.decodeByteArray(rawJPEG, 0, rawJPEG.length, Util.getRouteFollowingBitmapOpts());
-		Bitmap cropped = Util.getCroppedBitmap(bmp, mCameraControl.getCameraXRatio(),
-				mCameraControl.getCameraYRatio(), mCameraControl.getRadiusRatio());
-		bmp.recycle();
-		return cropped;
-	}
+	//	private Bitmap makeBitmap(byte[] rawJPEG) {
+	//		Bitmap bmp =  BitmapFactory.decodeByteArray(rawJPEG, 0, rawJPEG.length, Util.getRouteFollowingBitmapOpts());
+	//		Bitmap cropped = Util.getCroppedBitmap(bmp, mCameraControl.getCameraXRatio(),
+	//				mCameraControl.getCameraYRatio(), mCameraControl.getRadiusRatio());
+	//		bmp.recycle();
+	//		return cropped;
+	//	}
 
 	private void goTowards(int minStep) {
 		mRoboAntControl.doGoTowards(this, minStep);
@@ -334,12 +410,49 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		mGoTowardsNum.setText(mGoTowardsToPublish+"");
 	}
 
-	private byte[] takePicture(int pictureNum) {
-		mCameraControl.takePicture(this, pictureNum);
+	private Bitmap mTakePictureBuffer;
 
-		waitLock();
+	private Bitmap takePicture() {
+		//		mCameraControl.takePicture(this, pictureNum);
+		Log.i(TAG, "Taking picture..");
+		mTakePictureBuffer = null;
+		mCameraControl.getPicture(new OpenCVCamera.PictureListener() {
+
+			@Override
+			public void pictureReceived(final Bitmap picture) {
+				Log.i(TAG, "pictureReceived " + picture);
+
+				//				mHandler.post(new Runnable() {
+				//
+				//					@Override
+				//					public void run() {
+				//				synchronized (lock) {
+				//					mTakePictureBuffer = picture;
+				//					lock.notify();
+				//				}
+				GLOBAL.PICTURE_STORAGE = picture;
+				GLOBAL.PICTURE_MUTEX.release();
+				//					}
+				//				});
+				//				mHandler.
+
+			}
+		});
+
+
+		//
+		try {
+			GLOBAL.PICTURE_MUTEX.acquire();
+			return GLOBAL.PICTURE_STORAGE;
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		return null;
+
+		//		waitLock();
 		//        return imagesSSD(mReceivedPictures.peekLast(), mCompareTo);
-		return mReceivedPictures.peekLast();
+		//		return mReceivedPictures.peekLast();
 	}
 
 	private void waitLock() {
@@ -408,7 +521,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 			g2 = Color.green(pixel2);
 			bl1 = Color.blue(pixel1);
 			bl2 = Color.blue(pixel2);
-			
+
 
 			ssd += (r1 - r2) * (r1 - r2) +
 					(g1 - g2) * (g1 - g2) +
@@ -424,26 +537,40 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		return ssd;
 	}
 
+	public Handler getHandler() {
+		return mHandler;
+	}
 
-	public void stepTowards(final byte[] imageData) {
-		Log.i(TAG, "Step towards " + imageData.length);
+
+	public void stepTowards() {
+		Log.i(TAG, "Step towards");
 		//        mHandler.post(new Runnable() {
 
 		//            @Override
 		//            public void run() {
-		mCompareTo = imageData;
-		mCompareToBmp = makeBitmap(imageData);
-		mPicToPublishGoTowards = mCompareToBmp;
-		Log.i(TAG, "Notifying lock");
-		//                try {
-		//                    Thread.sleep(2000);
-		//                } catch (InterruptedException e) {
-		//                     TODO Auto-generated catch block
-		//                    e.printStackTrace();
-		//                }
-		synchronized (lock) {
-			lock.notify();
-		}
+		//		mCompareTo = imageData;
+		//		mCompareToBmp = makeBitmap(imageData);
+		mHandler.post(new Runnable() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				Log.i(TAG, "IMHERE HEHE");
+				Log.i(TAG, Thread.currentThread().getName());
+				mCompareToBmp = takePicture();
+				mPicToPublishGoTowards = mCompareToBmp;
+				//		Log.i(TAG, "Notifying lock");
+				//                try {
+				//                    Thread.sleep(2000);
+				//                } catch (InterruptedException e) {
+				//                     TODO Auto-generated catch block
+				//                    e.printStackTrace();
+				//                }
+				synchronized (lock) {
+					lock.notify();
+				}
+			}
+		});
 
 		//            }
 		//        });
@@ -512,9 +639,9 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 			lock.notify();
 		}
 	}
-//	
-//	public void notifySignChanged(int sign) {
-//		mRoboAntControl.setSpeeds(sign*TURN_SPEED, -sign*TURN_SPEED);
-//	}
+	//	
+	//	public void notifySignChanged(int sign) {
+	//		mRoboAntControl.setSpeeds(sign*TURN_SPEED, -sign*TURN_SPEED);
+	//	}
 
 }

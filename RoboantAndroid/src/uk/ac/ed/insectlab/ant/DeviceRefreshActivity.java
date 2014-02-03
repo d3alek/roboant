@@ -20,6 +20,10 @@
 
 package uk.ac.ed.insectlab.ant;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.content.Context;
 import android.hardware.usb.UsbDevice;
@@ -35,16 +39,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.TwoLineListItem;
-import uk.co.ed.insectlab.ant.R;
+
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 import com.hoho.android.usbserial.util.HexDump;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Shows a {@link ListView} of available USB devices.
@@ -150,6 +153,15 @@ public class DeviceRefreshActivity extends Activity {
                 showConsoleActivity(driver);
             }
         });
+        
+        Button btnContinue = (Button)findViewById(R.id.btn_continue);
+        btnContinue.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				showConsoleActivity(null);
+			}
+		});
     }
 
     @Override

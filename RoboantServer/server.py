@@ -14,7 +14,8 @@ import sys
 screenWidth = 1200
 screenHeight = 800
 imageHeight = screenHeight / 3
-imageWidth = int(imageHeight * 1.3)
+#imageWidth = int(imageHeight * 1.3)
+imageWidth = imageHeight
 
 SCREEN_SIZE = (screenWidth, screenHeight)
 SPHERE_RAD = 400
@@ -161,6 +162,7 @@ class AntRobotControl(LineReceiver):
     def lineReceived(self, line):
         #self.sendLine(line)
         global toHighlightTurn, toHighlightRoute
+        print line
         #if line.startswith(self.pictureStart):
             #if line.endswith(self.gotowardsEnd):
                 #self.imageType = Images.GoTowards
@@ -179,8 +181,6 @@ class AntRobotControl(LineReceiver):
             self.imageNum = int(m.group(2))
             self.setRawMode()
             self.imgData = ""
-        else:
-            print line[:40]
 
         m = re.search(MESSAGE_ROUTE_MATCH, line)
         if m:
@@ -204,6 +204,7 @@ class AntRobotControl(LineReceiver):
                 f = open('image_' + str(self.imageNum) + '.jpeg', 'wb')
             else:
                 f = open('image_go_towards_' + str(self.imageNum) + '.jpeg', 'wb')
+            print "Picture end for ", str(self.imageNum), " found"
             f.write(self.imgData)
             f.close()
             self.setLineMode();

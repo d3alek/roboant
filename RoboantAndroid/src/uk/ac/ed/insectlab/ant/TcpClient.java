@@ -35,10 +35,14 @@ public class TcpClient implements NetworkControl {
 	private long mLastKeepAlive;
 	private boolean mStopped;
 	private OutputStream mOutputStream;
-	private boolean mSendingPicture;
 	private Handler mHandler;
 
 	LinkedList<Runnable> mSendingQueue = new LinkedList<Runnable>();
+	private boolean mSendingBlock;
+
+
+	private Object mSendingLock = new Object();
+	private boolean mSendingPicture;
 
 	/**
 	 * Constructor of the class. OnMessagedReceived listens for the messages received from server
@@ -53,20 +57,45 @@ public class TcpClient implements NetworkControl {
 	 * @param message text entered by client
 	 */
 	public void sendMessage(final String message) {
-		if (!mSendingPicture) {
-			if (mBufferOut != null && !mBufferOut.checkError()) {
+		synchronized (mSendingLock) {
+
+			if (!mSendingPicture && mSendingQueue.isEmpty()) {
 				mBufferOut.println(message);
 				mBufferOut.flush();
-			}
-		}
-		else {
-			Log.i(TAG, "Delaying sending message " + message);
-			mSendingQueue.addFirst(new Runnable() {
-				@Override
-				public void run() {
-					sendMessage(message);
+				if (mBufferOut != null && !mBufferOut.checkError()) {
+					if (message.startsWith(NetworkControl.NEW_LOOK_AROUND)) {
+						mSendingBlock = true;
+						Log.i(TAG, "Block sending");
+						mSendingQueue.addFirst(new Runnable() {
+
+							@Override
+							public void run() {
+								// dummy to prevent sending for a while;
+							}
+						});
+						mHandler.postDelayed(new Runnable() {
+
+							@Override
+							public void run() {
+								// give some time for NEW_LOOK_AROUND MESSAGE to arrive 
+								Log.i(TAG, "Unblock sending");
+								mSendingQueue.removeFirst();
+								mSendingBlock = false;
+							}
+						}, 2000);
+					}
 				}
-			});
+			}
+			else {
+				Log.i(TAG, "Delaying sending message " + message);
+				mSendingQueue.add(new Runnable() {
+					@Override
+					public void run() {
+						_sendMessage(message);
+					}
+				});
+			}
+
 		}
 	}
 
@@ -76,7 +105,7 @@ public class TcpClient implements NetworkControl {
 	public void stopClient() {
 
 		// send mesage that we are closing the connection
-		sendMessage(Constants.CLOSED_CONNECTION);
+		_sendMessage(Constants.CLOSED_CONNECTION);
 		mStopped = true;
 
 		mRun = false;
@@ -96,14 +125,22 @@ public class TcpClient implements NetworkControl {
 		mStopped = false;
 		mRun = true;
 		mHandler = handler;
-		
+
 		Runnable executeQueueFront = new Runnable() {
-			
+
+
 			@Override
 			public void run() {
-				if (!mSendingQueue.isEmpty()) {
-					mSendingQueue.pop().run();
+				synchronized (mSendingLock) {
+					if (mSendingBlock) {
+						Log.i(TAG, "Sending blocked!");
+						return;
+					}
+					if (!mSendingPicture && !mSendingQueue.isEmpty()) {
+						mSendingQueue.pop().run();
+					}
 				}
+
 			}
 		};
 
@@ -129,12 +166,13 @@ public class TcpClient implements NetworkControl {
 				//receives the message which the server sends back
 				mBufferIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				// send login name
-				sendMessage(Constants.LOGIN_NAME);
+				_sendMessage(Constants.LOGIN_NAME);
 
 				//in this while the client listens for the messages sent by the server
 				while (mRun) {
-					
-					mHandler.post(executeQueueFront);
+
+					//					mHandler.post(executeQueueFront);
+					executeQueueFront.run();
 
 					if (mLastKeepAlive + KEEP_ALIVE_INTERVAL < System.currentTimeMillis()) {
 						Log.i(TAG, "keep-alive");
@@ -179,7 +217,7 @@ public class TcpClient implements NetworkControl {
 
 				Log.e("RESPONSE FROM SERVER", "S: Received Message: '" + mServerMessage + "'");
 
-			} catch (Exception e) {
+			} catch (IOException e) {
 
 				//                Log.e("TCP", "S: Error", e);
 
@@ -215,19 +253,59 @@ public class TcpClient implements NetworkControl {
 	}
 
 	public void sendPicture(final RoboPicture picture) {
-		if (!mSendingPicture) {
-			mSendingPicture = true;
+		synchronized (mSendingLock) {
+			if (!mSendingPicture && mSendingQueue.isEmpty()) {
+				Log.i(TAG, "Sending picture " + picture.pictureNum);
+				new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
+			}
+			else {
+				Log.i(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
+				mSendingQueue.add(new Runnable() {
+					@Override
+					public void run() {
+						_sendPicture(picture);
+					}
+				});	
+			}
+		}
+	}
+
+	private void _sendPicture(final RoboPicture picture) {
+		synchronized (mSendingLock) {
 			Log.i(TAG, "Sending picture " + picture.pictureNum);
+			mSendingPicture = true;
 			new SendPictureTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, picture);
 		}
-		else {
-			Log.i(TAG, "Sending picture " + picture.pictureNum + " delayed, another send in progress");
-			mSendingQueue.addFirst(new Runnable() {
-				@Override
-				public void run() {
-					sendPicture(picture);
+	}
+
+	private void _sendMessage(final String message) {
+		synchronized (mSendingLock) {
+
+			if (mBufferOut != null && !mBufferOut.checkError()) {
+				if (message.startsWith(NetworkControl.NEW_LOOK_AROUND)) {
+					mSendingBlock = true;
+					Log.i(TAG, "Block sending");
+					mSendingQueue.addFirst(new Runnable() {
+
+						@Override
+						public void run() {
+							// dummy to prevent sending for a while;
+						}
+					});
+					mHandler.postDelayed(new Runnable() {
+
+						@Override
+						public void run() {
+							// give some time for NEW_LOOK_AROUND MESSAGE to arrive 
+							Log.i(TAG, "Unblock sending");
+							mSendingQueue.removeFirst();
+							mSendingBlock = false;
+						}
+					}, 2000);
 				}
-			});	
+				mBufferOut.println(message);
+				mBufferOut.flush();
+			}
 		}
 	}
 
@@ -237,8 +315,6 @@ public class TcpClient implements NetworkControl {
 		protected Void doInBackground(RoboPicture... params) {
 			RoboPicture picture = params[0];
 			if (mBufferOut != null && !mBufferOut.checkError()) {
-				Log.i(TAG, "Sending picture");
-				Log.i(TAG, "Writing picture start " + picture);
 				mBufferOut.println("picture start " + picture);
 				mBufferOut.flush();
 				try {
@@ -256,6 +332,7 @@ public class TcpClient implements NetworkControl {
 		@Override
 		protected void onPostExecute(Void result) {
 			mHandler.postDelayed(new Runnable() {
+				
 				@Override
 				public void run() {
 					mSendingPicture = false;
