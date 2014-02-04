@@ -12,15 +12,18 @@ import sys
 
 
 screenWidth = 1200
-screenHeight = 800
-imageHeight = screenHeight / 3
+screenHeight = 750
+imageHeight = screenHeight / 4
 #imageWidth = int(imageHeight * 1.3)
 imageWidth = imageHeight
 
 SCREEN_SIZE = (screenWidth, screenHeight)
-SPHERE_RAD = 400
+SPHERE_RAD = 450
 
 scrollX = 0
+
+mTurnSSD = {}
+mRouteSSD = {}
 
 #def imagePosition(num):
     #global scrollX
@@ -32,7 +35,7 @@ def imagePosition(deg):
     global scrollX, SPHERE_RAD
     deg = 4*deg/3
     pos = (screenWidth/2 - imageWidth/2 + np.sin(np.radians(deg))*SPHERE_RAD, screenHeight/2-np.cos(np.radians(deg))*SPHERE_RAD)
-    pos = (int(pos[0]),int(pos[1]))
+    pos = (int(pos[0]),int(pos[1]) + 80)
     return pos
 
 def imageGoTowardsPosition(pos):
@@ -75,6 +78,10 @@ for joystick in joysticks:
     joystick.init()
     print joystick.get_numaxes()
     pass
+
+def sendGoMessage():
+    if mProtocol != None:
+        mProtocol.sendLine('go')
 
 def sendCameraOn():
     if mProtocol != None:
@@ -141,15 +148,18 @@ MESSAGE_NEW_LOOK_AROUND = "new_look_around"
 MESSAGE_TURN_TO = r'turn_to\s(-?\d+)' 
 MESSAGE_IMAGE = r'picture start\s(gotowards\s)?(-?\d+)' 
 MESSAGE_ROUTE_MATCH = r'route_match\s(\d+)'
+MESSAGE_SSD = r'ssd\s(-?\w+)\s(\w+)\s(\S+)'
 
 toHighlightTurn = None 
 toHighlightRoute = None 
 
 def deleteCurrentImages():
+    global mTurnSSD, mRouteSSD
     for fname in os.listdir('.'):
         if re.search(r'image_(-?\d+)', fname):
             os.remove(os.path.join('.', fname))
-    scrollX = 0
+    mTurnSSD = {}
+    mRouteSSD = {}
         
 
 class AntRobotControl(LineReceiver):
@@ -161,7 +171,7 @@ class AntRobotControl(LineReceiver):
 
     def lineReceived(self, line):
         #self.sendLine(line)
-        global toHighlightTurn, toHighlightRoute
+        global toHighlightTurn, toHighlightRoute, mTurnSSD, mRouteSSD
         print line
         #if line.startswith(self.pictureStart):
             #if line.endswith(self.gotowardsEnd):
@@ -193,6 +203,15 @@ class AntRobotControl(LineReceiver):
         m = re.search(MESSAGE_TURN_TO, line)
         if  m:
             toHighlightTurn = int(m.group(1))
+
+        m = re.search(MESSAGE_SSD, line)
+        if m:
+            deg = int(m.group(1))
+            routeNum = int(m.group(2))
+            ssd = m.group(3)
+            print "SSD", str(deg), str(routeNum), ssd
+            mTurnSSD[deg] = (ssd, routeNum)
+            mRouteSSD[routeNum] = (ssd, deg)
 
 
     def rawDataReceived(self, data):
@@ -241,30 +260,57 @@ import os, re
 
 maxImageNum = 0
 
+mFont = pygame.font.Font(None, 36)
+
+textColor = (0, 160, 0)
+
 def images_tick():
     global imageGoTowardsPosition, picturesChanged, imageSize
     global maxImageNum, toHighlightTurn, toHighlightRoute
+    global mTurnSSD, mRouteSSD
+    global mFont
+    global textColor
 
     images.fill(pygame.Color(0, 0, 0))
+
+    routeImageNums = []
+    turnImageNums = []
+    maxImageNum = 0
+
 
     for fname in os.listdir('.'):
         m = re.search(r'image_(go_towards_)?(-?\d+)', fname)
         if not m:
             continue
 
-        maxImageNum = 0
         imageSurface = pygame.image.load(fname)
         imageNum = int(m.group(2))
+
+
         if m.group(1):
             imageSurface = pygame.transform.scale(imageSurface,
                                                   (imageWidth, imageHeight))
             images.blit(imageSurface, imageGoTowardsPosition(imageNum))
             if imageNum > maxImageNum:
                 maxImageNum = imageNum
+            routeImageNums += [imageNum]
         else:
             imageSurface = pygame.transform.scale(imageSurface,
                                                   (imageWidth,imageHeight))
             images.blit(imageSurface, imagePosition(imageNum))
+
+            turnImageNums += [imageNum]
+
+    for num in routeImageNums:
+        if mRouteSSD.has_key(num):
+            text = mFont.render(mRouteSSD[num][0] + ', ' + str(mRouteSSD[num][1]), 1, textColor)
+            images.blit(text, imageGoTowardsPosition(num))
+
+    for num in turnImageNums:
+        if mTurnSSD.has_key(num):
+            text = mFont.render(mTurnSSD[num][0] + ", " + str(mTurnSSD[num][1]), 1, textColor)
+            images.blit(text, imagePosition(num))
+
 
     screen.blit(images, (0, 0))
 
@@ -339,6 +385,8 @@ def events_tick():
             #if event.key == K_LEFT:
                 #changeX = True 
                 #axisX -= 50
+            if event.key == K_g:
+                sendGoMessage();
         elif event.type == KEYUP:
             if event.key == K_RIGHT:
                 rightDown = False

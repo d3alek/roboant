@@ -58,7 +58,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private static final long CAMERA_TIMEOUT = 1000;
 	private final String TAG = AntControlActivity.class.getSimpleName();
 
-	private final String SERVER_IP = "172.20.155.68";
+	private final String SERVER_IP = "172.20.155.228";
 
 	/**
 	 * Driver instance, passed in statically via
@@ -121,10 +121,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 	private SeekBar mRightSeek;
 
-	//	private Camera mCamera;
-
-	//	private CameraPreview mPreview;
-
 	private Button mCaptureButton;
 
 	private MediaRecorder mMediaRecorder;
@@ -136,14 +132,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private TextView mRecordingText;
 
 	private ProgressBar mTrackProgressBar;
-
-	//	private CameraOverlay mCameraOverlay;
-
-	private SensorManager mSensorManager;
-
-	private Sensor accelerometer;
-
-	private Sensor magnetometer;
 
 	private OpenCVCamera mCamera;
 
@@ -171,66 +159,10 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 			@Override
 			public void onClick(View v) {
-				if (mCamera != null) {
-					if (mAIControl != null) {
-						takeAIPicture();
-					}
-					else {
-						//						PictureCallback callback = new PictureCallback() {
-						//
-						//							@Override
-						//							public void onPictureTaken(byte[] data, Camera camera) {
-						//
-						//								File pictureFile = Util.getOutputMediaFile(Constants.MEDIA_TYPE_IMAGE);
-						//								Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
-						//								Bitmap cropped = cropCameraFromBitmap(bmp);
-						//								mStepTowardsPic.setImageBitmap(cropped);
-						//								//								if (mTcpClient != null) {
-						//								//									mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround));
-						//								//								}
-						//
-						//								//								StringBuilder str = new StringBuilder(); 
-						//								Log.i(TAG, "onPictureTaken " + cropped.getWidth() + " " + cropped.getHeight());
-						//
-						//								//								Log.i(TAG, "onPictureTaken " + str.toString());
-						//								//								mStepTowardsPic.setImageBitmap(bmp);
-						//								if (pictureFile == null){
-						//									Log.d(TAG, "Error creating media file, check storage permissions");
-						//									return;
-						//								}
-						//
-						//								try {
-						//									FileOutputStream fos = new FileOutputStream(pictureFile);
-						//									fos.write(data);
-						//									fos.close();
-						//									camera.startPreview();
-						//								} catch (FileNotFoundException e) {
-						//									Log.d(TAG, "File not found: " + e.getMessage());
-						//								} catch (IOException e) {
-						//									Log.d(TAG, "Error accessing file: " + e.getMessage());
-						//								}
-						//							}
-						//
-						//
-						//						};
-						//						mCamera.takePicture(null, null, callback);
-						mCamera.getPicture(new OpenCVCamera.PictureListener() {
-							@Override
-							public void pictureReceived(Bitmap picture) {
-								mStepTowardsPic.setImageBitmap(picture);
-							}
-						});
-					}
-				}
+				takePicture();
 			}
 
-
-
-
 		});
-
-		//		mCameraOverlay = (CameraOverlay) findViewById(R.id.camera_overlay);
-
 
 		final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "My Tag");
@@ -292,83 +224,35 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 		mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.camera_preview);
 		mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
-		
-//		handler.postDelayed(new Runnable() {
-//
-//			@Override
-//			public void run() {
-
-				mCamera = new OpenCVCamera();
+		mCamera = new OpenCVCamera();
 
 
-				mOpenCvCameraView.setCvCameraViewListener(mCamera);
-//			}
-//		}, 1000);
+		mOpenCvCameraView.setCvCameraViewListener(mCamera);
 
-		//		if (Util.checkCameraHardware(this)) {
-		//			Toast.makeText(this, "Initializing camera", Toast.LENGTH_SHORT).show();
-		//			mCamera = Util.getCameraInstance(CAMERA_NUMBER);
-		//			Log.i(TAG, "Supported picture formats " + Arrays.toString(mCamera.getParameters().getSupportedPictureFormats().toArray()));
-		//			Log.i(TAG, "Supported picture sizes ");
-		//			for (Camera.Size size: mCamera.getParameters().getSupportedPictureSizes()) {
-		//				Log.i(TAG, size.width + " " + size.height);
-		//			}
-		//			if (mCamera == null) {
-		//				Log.i(TAG, "Could not get hold of camera");
-		//				Toast.makeText(this, "Could not get hold of camera", Toast.LENGTH_LONG).show();
-		//			}
-		//			else {
-		//				Util.setCameraDisplayOrientation(this, CAMERA_NUMBER, mCamera);
-		//				// Create our Preview view and set it as the content of our activity.
-		//				int width = getResources().getDisplayMetrics().widthPixels;
-		//				int height = getResources().getDisplayMetrics().heightPixels;
-		//				Camera.Parameters params = mCamera.getParameters();
-		//
-		//
-		//				//				params.setPictureSize(, 768);
-		//				//				params.setSceneMode(Camera.Parameters.);
-		//				//				params.setPreviewSize(width, height);
-		//				//				params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
-		//				//				params.setFocusMode(Camera.Parameters.);
-		//				//				params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_TWILIGHT);
-		//				params.setExposureCompensation(params.getMaxExposureCompensation());
-		//				mCamera.setParameters(params);
-		//
-		//
-		//				mPreview = new CameraPreview(this, mCamera);
-		//				FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-		//				preview.addView(mPreview);
-		//
-		//				// Add a listener to the Capture button
-		//				mCaptureButton = (Button) findViewById(R.id.btn_record);
-		//				mCaptureButton.setOnClickListener(
-		//						new View.OnClickListener() {
-		//							@Override
-		//							public void onClick(View v) {
-		//								toggleCameraRecording();
-		//							}
-		//						}
-		//						);
-		//				handler.postDelayed(new Runnable() {
-		//
-		//					@Override
-		//					public void run() {
-		//						mCamera.autoFocus(new AutoFocusCallback() {
-		//							@Override
-		//							public void onAutoFocus(boolean success, Camera camera) {
-		//								Log.i(TAG, "On auto focus " + success);
-		//
-		//							}
-		//						});
-		//
-		//					}
-		//				}, 2000);
-		//			}
-		//		}
+	}
 
-		mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
-		accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-		magnetometer = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+	private void takePicture() {
+		if (mCamera != null) {
+			if (mAIControl != null) {
+				takeAIPicture();
+			}
+			else {
+
+				mCamera.getPicture(new OpenCVCamera.PictureListener() {
+					@Override
+					public void pictureReceived(final Bitmap picture) {
+						handler.post(new Runnable() {
+
+							@Override
+							public void run() {
+								mStepTowardsPic.setImageBitmap(picture);
+
+							}
+						});
+					}
+				});
+			}
+		}
 	}
 
 	private void showRouteSelectionDialog() {
@@ -383,10 +267,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		DialogFragment newFragment = new RouteSelectionDialogFragment();
 		newFragment.show(ft, "dialog");
 	}
-	//
-	//	private Bitmap cropCameraFromBitmap(Bitmap bmp) {
-	//		return Util.getCroppedBitmap(bmp, getCameraXRatio(), getCameraYRatio(), getRadiusRatio());
-	//	}
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
@@ -418,37 +298,8 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	}
 
 	private void takeAIPicture() {
-		//		PictureCallback pictureStepTowards = new PictureCallback() {
-		//			@Override
-		//			public void onPictureTaken(byte[] data, Camera camera) {
-		//				Log.i(TAG, "Picture for AIControl taken");
-		//				mAIControl.stepTowards(data); 
-		//				//				if (mTcpClient != null) {
-		//				//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.GoTowards));
-		//				//				}
-		//				ImageView stepTowards = (ImageView)findViewById(R.id.pic_step_towards);
-		//				Bitmap bmp = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
-		//				stepTowards.setImageBitmap(bmp);
-		////				delayedStartPreview();
-		//			}
-		//		};
-		//		try {
-		////			mCamera.takePicture(null, null, pictureStepTowards);
-		//		}
-		//		catch (Exception e) {
-		//			e.printStackTrace();
-		//			handler.postDelayed(new Runnable() {
-		//
-		//				@Override
-		//				public void run() {
-		//					takeAIPicture();
-		//				}
-		//			}, 100);
-		//		}
-
-//		mAIControl.stepTowards();
 		mAIControl.getHandler().post(new Runnable() {
-			
+
 			@Override
 			public void run() {
 				mAIControl.stepTowards();
@@ -457,101 +308,8 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 	}
 
-	//	void delayedStartPreview() {
-	//		handler.postDelayed(new Runnable() {
-	//
-	//			@Override
-	//			public void run() {
-	//				mCamera.startPreview(); 
-	//			}
-	//		}, 100);
-	//	}
-
-	//	private void toggleCameraRecording() {
-	//		if (isRecording) {
-	//			// stop recording and release camera
-	//			mMediaRecorder.stop();  // stop the recording
-	//			releaseMediaRecorder(); // release the MediaRecorder object
-	//			mCamera.lock();         // take camera access back from MediaRecorder
-	//
-	//			// inform the user that recording has stopped
-	//			mCaptureButton.setText("Capture");
-	//			isRecording = false;
-	//		} else {
-	//			// initialize video camera
-	//			if (prepareVideoRecorder()) {
-	//				// Camera is available and unlocked, MediaRecorder is prepared,
-	//				// now you can start recording
-	//				mMediaRecorder.start();
-	//
-	//				// inform the user that recording has started
-	//				mCaptureButton.setText("Stop");
-	//				isRecording = true;
-	//			} else {
-	//				// prepare didn't work, release the camera
-	//				releaseMediaRecorder();
-	//				// inform user
-	//			}
-	//		}
-	//
-	//	}
-
-	//	private boolean prepareVideoRecorder() {
-	//		//      mCamera = getCameraInstance();
-	//		mMediaRecorder = new MediaRecorder();
-	//
-	//		// Step 1: Unlock and set camera to MediaRecorder
-	//		mCamera.unlock();
-	//		mMediaRecorder.setCamera(mCamera);
-	//
-	//		// Step 2: Set sources
-	//		mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
-	//		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-	//
-	//		// Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
-	//		mMediaRecorder.setProfile(CamcorderProfile.get(CAMERA_NUMBER, CamcorderProfile.QUALITY_HIGH));
-	//		//      mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
-	//		//      mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT);
-	//
-	//		// Step 4: Set output file
-	//		mMediaRecorder.setOutputFile(Util.getOutputMediaFile(Constants.MEDIA_TYPE_VIDEO).toString());
-	//		mMediaRecorder.setVideoSize(1280, 960); 
-	//		// Step 5: Set the preview output
-	//		mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
-	//
-	//		// Step 6: Prepare configured MediaRecorder
-	//		try {
-	//			mMediaRecorder.prepare();
-	//		} catch (IllegalStateException e) {
-	//			Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
-	//			releaseMediaRecorder();
-	//			return false;
-	//		} catch (IOException e) {
-	//			Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
-	//			releaseMediaRecorder();
-	//			return false;
-	//		}
-	//		return true;
-	//	}
-
 	private boolean isRecording = false;
 
-
-	//	private void releaseMediaRecorder(){
-	//		if (mMediaRecorder != null) {
-	//			mMediaRecorder.reset();   // clear recorder configuration
-	//			mMediaRecorder.release(); // release the recorder object
-	//			mMediaRecorder = null;
-	//			mCamera.lock();           // lock camera for later use
-	//		}
-	//	}
-
-	//	private void releaseCamera(){
-	//		if (mCamera != null){
-	//			mCamera.release();        // release the camera for other applications
-	//			mCamera = null;
-	//		}
-	//	}
 
 	@Override
 	public void onDestroy() {
@@ -598,8 +356,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 		@Override
 		protected TcpClient doInBackground(Void... nothing) {
-			//			Log.i(TAG, "Starting a ConnectTask");
-
 			if (mTcpClient != null) {
 				return null;
 			}
@@ -634,7 +390,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 				@Override
 				public void connected() {
-					//					Log.i(TAG, "Connected");
 					AntControlActivity.this.runOnUiThread(new Runnable() {
 
 						@Override
@@ -681,13 +436,10 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	}
 
 	private void handleMessage(String message) {
-		//        Log.i(TAG, "Message received " + message);
 		Matcher matcher = mPattern.matcher(message);
 		if (matcher.find()) {
 			int speed = Integer.parseInt(matcher.group(2));
-			//            Log.i(TAG, "Pattern found! Speed is " + speed);
 			if (mAIControl != null) {
-				//                Log.i(TAG, "AI is in control!");
 				return;
 			}
 			if (mRoboAntControl == null) {
@@ -708,7 +460,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 				return;
 			}
 			mCamMessageRecievedAt = System.currentTimeMillis();
-			//			toggleCameraRecording();
 		}
 		else if (message.startsWith("ai")) {
 			Log.i(TAG, "ai message!");
@@ -717,12 +468,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		}
 		else if (message.startsWith("pic")) {
 			Log.i(TAG, "pic message!");
-			if (mAIControl != null) {
-				takeAIPicture();
-			}
-			else {
-				//				mCamera.takePicture(null, null, Util.mPicture);
-			}
+			takePicture();
 		}
 		else if (message.startsWith("rec")) {
 			Log.i(TAG, "rec message!");
@@ -744,6 +490,11 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 			Log.i(TAG, "Calibrate message");
 			if (mRoboAntControl != null) {
 				mRoboAntControl.calibrate();
+			}
+		}
+		else if (message.startsWith("go")) {
+			if (mAIControl != null) {
+				mAIControl.releaseLock();
 			}
 		}
 	}
@@ -798,16 +549,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 					}
 
 					mRecordingRunnable = this;
-					//					PictureCallback callback = new PictureCallback() {
-					//						@Override
-					//						public void onPictureTaken(byte[] data, Camera camera) {
-					//							Bitmap big = BitmapFactory.decodeByteArray(data, 0, data.length, Util.getRouteFollowingBitmapOpts());
-					//							mRoutePictures.add(Util.getCroppedBitmap(big, getCameraXRatio(), getCameraYRatio(), getRadiusRatio()));
-					//							big.recycle();
-					//							Log.i(TAG, "Route picture taken: " + mRoutePictures.size());
-					////							delayedStartPreview();
-					//						}
-					//					};
 					mCamera.getPicture(new OpenCVCamera.PictureListener() {
 						@Override
 						public void pictureReceived(Bitmap picture) {
@@ -829,7 +570,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	@Override
 	protected void onPause() {
 		super.onPause();
-		mSensorManager.unregisterListener(mRoboAntControl);
 		this.mWakeLock.release();
 		stopIoManager();
 		if (sDriver != null) {
@@ -846,10 +586,9 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		if (mConnectorRunnable != null) {
 			handler.removeCallbacks(mConnectorRunnable);
 		}
-		if (mOpenCvCameraView != null)
+		if (mOpenCvCameraView != null) {
 			mOpenCvCameraView.disableView();
-		//		releaseMediaRecorder();
-		//		releaseCamera();
+		}
 		finish();
 	}
 
@@ -861,7 +600,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 		Log.d(TAG, "Resumed, sDriver=" + sDriver);
 		if (sDriver == null) {
-			//            mTitleTextView.setText("No serial device.");
 			Toast.makeText(this, "No serial device", Toast.LENGTH_LONG).show();;
 		} else {
 			try {
@@ -879,7 +617,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 				sDriver = null;
 				return;
 			}
-			//            mTitleTextView.setText("Serial device: " + sDriver.getClass().getSimpleName());
 			Toast.makeText(this, "Serial device " + sDriver.getClass().getSimpleName(), Toast.LENGTH_LONG).show();;
 		}
 		onDeviceStateChange();
@@ -901,11 +638,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 			mSerialIoManager = new SerialInputOutputManager(sDriver, mListener);
 			mExecutor.submit(mSerialIoManager);
 			mRoboAntControl = new RoboAntControl(mSerialIoManager);
-			mRoboAntControl.setCompassView((TextView)findViewById(R.id.compass_view));
-			mSensorManager.registerListener(mRoboAntControl, accelerometer, SensorManager.SENSOR_DELAY_UI);
-			mSensorManager.registerListener(mRoboAntControl, magnetometer, SensorManager.SENSOR_DELAY_UI);
-			//            mAIControl = new AIControlTask(this, mAIMessage);
-			//            mAIControl.execute(mRoboAntControl);
 		}
 	}
 
@@ -969,78 +701,9 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		super.onStop();
 	}
 
-	//	@Override
-	//	public void takePicture(final CameraReceiver receiver, final int pictureNum) {
-	//		final PictureCallback sendToReceiver = new PictureCallback() {
-	//
-	//			@Override
-	//			public void onPictureTaken(byte[] data, Camera camera) {
-	//				receiver.receivePicture(data); 
-	//				//				if (mTcpClient != null) {
-	//				//					mTcpClient.sendPicture(new RoboPicture(data, PictureType.LookAround, pictureNum));
-	//				//				}
-	//				//				new SendPictureTask().execute(data);
-	////				delayedStartPreview();
-	//				new SaveImageTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, data);
-	//			}
-	//		};
-	//		try {
-	////			mCamera.takePicture(null, null, sendToReceiver);
-	//		}
-	//		catch (NullPointerException e) {
-	//			e.printStackTrace();
-	////			releaseCamera();
-	////			mCamera = Util.getCameraInstance(CAMERA_NUMBER);
-	//			handler.postDelayed(new Runnable() {
-	//
-	//				@Override
-	//				public void run() {
-	//					takePicture(receiver, pictureNum);
-	//				}
-	//			}, 100);
-	//		}
-	//		catch (Exception e) {
-	//			e.printStackTrace();
-	//			handler.postDelayed(new Runnable() {
-	//
-	//				@Override
-	//				public void run() {
-	//					takePicture(receiver, pictureNum);
-	//				}
-	//			}, 100);
-	//		}
-	//	}
-
-	//	@Override
-	//	public float getCameraXRatio() {
-	//		return mCameraOverlay.getCameraX();
-	//		return OpenCVCamera.
-	//	}
-	//
-	//	@Override
-	//	public float getCameraYRatio() {
-	////		return mCameraOverlay.getCameraY();
-	//	}
-	//
-	//	@Override
-	//	public float getRadiusRatio() {
-	////		return mCameraOverlay.getRadius();
-	//	}
-
 	@Override
 	public void onRouteSelected(List<Bitmap> bitmap) {
 		mRoutePictures = bitmap;
-
 	}
-
-
-
-
-
-	//	@Override
-	//	public void givePictureToReceiver() {
-	//		// TODO Auto-generated method stub
-	//
-	//	}
 
 }

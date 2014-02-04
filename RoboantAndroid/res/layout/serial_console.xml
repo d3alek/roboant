@@ -17,17 +17,6 @@
             opencv:camera_id="front"
             opencv:show_fps="true" />
 
-        <!-- <FrameLayout -->
-        <!-- android:id="@+id/camera_preview" -->
-        <!-- android:layout_width="match_parent" -->
-        <!-- android:layout_height="match_parent" /> -->
-
-
-        <!-- <uk.ac.ed.insectlab.ant.CameraOverlay -->
-        <!-- android:id="@+id/camera_overlay" -->
-        <!-- android:layout_width="match_parent" -->
-        <!-- android:layout_height="match_parent" /> -->
-
         <Button
             android:id="@+id/btn_record"
             android:layout_width="wrap_content"
@@ -180,13 +169,5 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true" />
-
-    <TextView
-        android:id="@+id/compass_view"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentTop="true"
-        android:textSize="32sp" />
 
 </RelativeLayout>

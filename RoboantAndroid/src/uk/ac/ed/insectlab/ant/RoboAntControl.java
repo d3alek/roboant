@@ -9,7 +9,7 @@ import android.widget.TextView;
 
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-public class RoboAntControl implements SensorEventListener {
+public class RoboAntControl {
 	private int mRightSpeed;
 	private int mLeftSpeed;
 	private SerialInputOutputManager mSerialIoManager;
@@ -92,64 +92,7 @@ public class RoboAntControl implements SensorEventListener {
 	public void calibrate() {
 		mSerialIoManager.writeAsync("c\n".getBytes()); 
 	}
-	
-	public void setCompassView(TextView view) {
-		mCompassView = view;
-	}
 
-	@Override
-	public void onAccuracyChanged(Sensor sensor, int accuracy) {
-		Log.i(TAG, "onAccuracyChanged");
-	}
-
-	TextView mCompassView;
-	private float mDirectionAdjustment;
-	private int mTargetDirection;
-	private AIControlTask mControl;
-	
-	@Override
-	public void onSensorChanged(SensorEvent event) {
-		if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER)
-			mGravity = event.values;
-		if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD)
-			mGeomagnetic = event.values;
-		if (mGravity != null && mGeomagnetic != null) {
-			float R[] = new float[9];
-			float I[] = new float[9];
-			boolean success = SensorManager.getRotationMatrix(R, I, mGravity, mGeomagnetic);
-			if (success) {
-				float orientation[] = new float[3];
-				SensorManager.getOrientation(R, orientation);
-				azimut = orientation[0]; // orientation contains: azimut, pitch and roll
-				
-				if (mControl != null) {
-					Log.i(TAG, "Dir is " + getDirection() + " target is " + mTargetDirection);
-//					int offset = getDirection() - mTargetDirection;
-					int relativeHeading = relativeHeading(getDirection(), mTargetDirection);
-
-					if (Math.abs(relativeHeading) < DIR_THRESHOLD) {
-						mControl.notifyTargetReached();
-						mControl = null;
-						setSpeeds(0, 0);
-					}
-					else {
-						int dir = relativeHeading > 0 ? 1 : -1;
-						//TODO: decreasing speed maybe?
-						setSpeeds(dir*TURN_SPEED, -dir*TURN_SPEED);
-					}
-				}
-				if (mCompassView != null) {
-					mCompassView.post(new Runnable() {
-						
-						@Override
-						public void run() {
-							mCompassView.setText(getDirection() +  "");
-						}
-					});
-				}
-			}
-		}
-	}
 
 	private int relativeHeading(int fromDeg, int toDeg) {
 		int relativeHeading = toDeg - fromDeg;
@@ -179,20 +122,5 @@ public class RoboAntControl implements SensorEventListener {
 //			dir += 360;
 //		}
 		return dir;
-	}
-
-	public void setDirectionZero() {
-		mDirectionAdjustment = -azimut;
-	}
-
-	public void setTargetDirection(int target, AIControlTask aiControlTask) {
-		mTargetDirection = target;
-		mControl = aiControlTask;
-	}
-	
-	public void doTurn(int degrees, AIControlTask aiControlTask) {
-		Log.i(TAG, "Doing turn to " + degrees);
-		mTargetDirection = (getDirection() + degrees) % 360;
-		mControl = aiControlTask;
 	}
 }
