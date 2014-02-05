@@ -9,5 +9,6 @@
     <string name="ai">AI</string>
     <string name="calibrate">Calibrate</string>
     <string name="select_route">Select Route</string>
+    <string name="forget_lens">Recalculate lens</string>
     
 </resources>

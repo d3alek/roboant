@@ -31,7 +31,7 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 
 	private static final boolean AWAIT_CONFIRM = true;
 
-	double OPTIC_FLOW_TURN = 80/360.;
+	double OPTIC_FLOW_TURN = 10/360.;
 
 	private RoboAntControl mRoboAntControl;
 
@@ -405,12 +405,13 @@ public class AIControlTask extends AsyncTask<RoboAntControl, String, Void> imple
 		bmp.recycle();
 
 		double k = 30;
-		int turn_speed = 100;
+		int turn_speed = 80;
 		int turn_time2 = 100;
 
 		boolean method1 = false;
+		Log.i(TAG, "curFlow is " + curFlow);
 
-		while (curFlow > 10) {
+		while (curFlow > 0.5) {
 			Log.i(TAG, "curFlow is " + curFlow);
 			if (method1) {
 				mRoboAntControl.setSpeeds(dir*turn_speed, -dir*turn_speed);

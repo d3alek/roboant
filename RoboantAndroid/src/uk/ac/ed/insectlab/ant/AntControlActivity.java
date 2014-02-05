@@ -292,6 +292,9 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		case R.id.action_select_route:
 			showRouteSelectionDialog();
 			return true;
+		case R.id.action_forget_lens:
+			mCamera.forgetLens();
+			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}

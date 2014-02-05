@@ -11,16 +11,15 @@ import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfFloat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
+import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
 
 import android.graphics.Bitmap;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 
 public class OpenCVCamera implements CvCameraViewListener2 {
@@ -48,18 +47,21 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private Point pt2;
 	private Scalar colorRed = new Scalar(new double[] {200.0, 0.0, 0.0, 0.0});
 	private Scalar colorGreen = new Scalar(new double[] {1.0, 200.0, 0.0, 0.0});
-	private int iLineThickness = 10;
+	private int iLineThickness = 1;
 	private static final int MAX_CORNERS = 40;
 	private static final String TAG = null;
 	private static final int LASSO_POINTS_NUM = 100;
 	private static final double SPRING_FORCE_K = 0.1;
 
 	private static final int CAMERA_RADIUS = 220;
+	private static final int CIRCLE_RADIUS = 1;
+	private static final double FEATURES_QUALITY = 0.01;
+	private static final double FEATURES_DISTANCE = 8;
 
 	private int waitFor = 10;
 	Mat mRgbaSmall;
 
-	int DOWNSAMPLE_RATE = 2;
+	int DOWNSAMPLE_RATE = 1;
 
 	Mat mRgba;
 	private Mat mRgbaSave;
@@ -68,6 +70,8 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private double mTotalFlow;
 	private FlowListener mFlowListener;
 	private PictureListener mPictureListener;
+	private boolean mLensFound;
+	private Point3 mLens;
 
 	@Override
 	public void onCameraViewStarted(int width, int height) {
@@ -81,6 +85,12 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		mMOFerr = new MatOfFloat();
 		mRgbaSmall = new Mat();
 		mRgbaSave = new Mat();
+
+		mLens = GLOBAL.getSettings().loadLens();
+		
+		if (mLens != null) {
+			mLensFound = true;
+		}
 
 	}
 
@@ -108,9 +118,46 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 			return mRgba;
 		}
 
+
+		if (!mLensFound) {
+			List<Point3> circles = detectCircles(mRgba);
+			Mat circleMat = new Mat(mRgba.rows(), mRgba.cols(), mRgba.type());
+			
+			if (circles.size() > 0) {
+				Point3 circle = circles.get(0);
+				Core.circle(circleMat, new Point(circle.x, circle.y), (int)circle.z, 
+						new Scalar(new double[] {200.0, 200.0, 200.0, 200.0}), -1);
+				Core.bitwise_and(circleMat, mRgba, mRgba);
+				mLensFound = true;
+				mLens = circle;
+				GLOBAL.getSettings().saveLens(mLens);
+			}
+		}
+		else {
+			Mat circleMat = Mat.zeros(mRgba.rows(), mRgba.cols(), mRgba.type());
+			Core.circle(circleMat, new Point(mLens.x, mLens.y), (int)mLens.z, 
+					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
+			
+			Core.bitwise_and(circleMat, mRgba, mRgba);
+		}
+//
+//		List<Point3> circles = detectCircles(mRgba);
+//		Mat circleMat = new Mat(mRgba.rows(), mRgba.cols(), mRgba.type());
+//		
+//		if (circles.size() > 0) {
+//			Point3 circle = circles.get(0);
+//			Core.circle(circleMat, new Point(circle.x, circle.y), (int)circle.z, 
+//					new Scalar(new double[] {200.0, 200.0, 200.0, 200.0}), -1);
+//			
+//			Core.bitwise_and(circleMat, mRgba, mRgba);
+//		}
+		
+		
+
 		Imgproc.resize(mRgba, mRgbaSmall, new Size(mRgba.cols()/DOWNSAMPLE_RATE, mRgba.rows()/DOWNSAMPLE_RATE));
 		mRgba.copyTo(mRgbaSave);
 
+		
 		if (mPictureListener != null) {
 			mPictureListener.pictureReceived(getPanoramicPicture());
 			mPictureListener = null;
@@ -118,8 +165,58 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 
 		calcOpticFlow(mRgbaSmall);
 		drawOpticFlow(mRgba);
+		
+//		Mat gray = new Mat();
+//		Imgproc.cvtColor(mRgba, gray, Imgproc.COLOR_RGBA2GRAY);
+//		
+////		Mat circles = new Mat();
+//		MatOfPoint3f circles = new MatOfPoint3f();
+//		
+//		Imgproc.GaussianBlur(gray, gray, new Size(9, 9), 2, 2);
+//		Imgproc.HoughCircles(gray, circles, Imgproc.CV_HOUGH_GRADIENT, 1, gray.rows()/8, 200, 100, 0, 50);
+////		
+////		circles.toList();
+////		for (int i = 0; i < circles.rows(); ++i) {
+////			circles.
+////		}
+//		
+//		for (Point3 p: circles.toList()) {
+//			Core.circle(gray, new Point(p.x, p.y), (int)p.z, colorGreen);
+//		}
+		
+//		for (int i = 0; i < circles.rows(); ++i) {
+//			Point center = new Point(circles.get(i, 0), circles.get(i, 1));
+//			Core.circle(mRgba, circles.get(i, 2), radius, color);
+//		}
 
 		return mRgba;
+	}
+	
+	public void forgetLens() {
+		mLensFound = false;
+	}
+
+	private static List<Point3> detectCircles(Mat rgba) {
+		Mat gray = new Mat();
+		Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY);
+		
+//		Mat circles = new Mat();
+		MatOfPoint3f circles = new MatOfPoint3f();
+		
+		Imgproc.GaussianBlur(gray, gray, new Size(9, 9), 1, 1);
+		Imgproc.HoughCircles(gray, circles, Imgproc.CV_HOUGH_GRADIENT, 1, gray.rows()/10, 200, 40, 0, 0);
+//		
+//		circles.toList();
+//		for (int i = 0; i < circles.rows(); ++i) {
+//			circles.
+//		}
+		
+		for (Point3 p: circles.toList()) {
+			Core.circle(rgba, new Point(p.x, p.y), (int)p.z, new Scalar(new double[] {1.0, 200.0, 0.0, 0.0}));
+		}
+		
+		return circles.toList();
+		
 	}
 
 	private Point multPointScalar(Point point, double scalar) {
@@ -152,7 +249,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 				pt.set(new double[] {pt.x*DOWNSAMPLE_RATE, pt.y*DOWNSAMPLE_RATE});
 				pt2.set(new double[] {pt2.x*DOWNSAMPLE_RATE, pt2.y*DOWNSAMPLE_RATE});
 
-				Core.circle(mrgba, pt, 5, colorRed , iLineThickness  - 1);  
+				Core.circle(mrgba, pt, CIRCLE_RADIUS, colorRed , iLineThickness  - 1);  
 				Core.line(mrgba, pt, pt2, colorRed, iLineThickness);  
 
 				//				avgFlow += Math.sqrt((pt.x - pt2.x)*(pt.x - pt2.x)
@@ -204,7 +301,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 			matOpFlowThis.copyTo(matOpFlowPrev);  
 
 			// get prev corners  
-			Imgproc.goodFeaturesToTrack(matOpFlowPrev, MOPcorners, MAX_CORNERS, 0.01, 20);  
+			Imgproc.goodFeaturesToTrack(matOpFlowPrev, MOPcorners, MAX_CORNERS, FEATURES_QUALITY, FEATURES_DISTANCE);  
 			mMOP2fptsPrev.fromArray(MOPcorners.toArray());  
 
 			// get safe copy of this corners  
@@ -220,7 +317,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 			Imgproc.cvtColor(rgba, matOpFlowThis, Imgproc.COLOR_RGBA2GRAY);  
 
 			// get the corners for this mat  
-			Imgproc.goodFeaturesToTrack(matOpFlowThis, MOPcorners, MAX_CORNERS, 0.01, 20);  
+			Imgproc.goodFeaturesToTrack(matOpFlowThis, MOPcorners, MAX_CORNERS, FEATURES_QUALITY, FEATURES_DISTANCE);  
 			mMOP2fptsThis.fromArray(MOPcorners.toArray());  
 
 			// retrieve the corners from the prev mat  
@@ -276,8 +373,8 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		Imgproc.cvtColor(fromMat, fromGray, Imgproc.COLOR_RGBA2GRAY);  
 		Imgproc.cvtColor(toMat, toGray, Imgproc.COLOR_RGBA2GRAY);  
 
-		Imgproc.goodFeaturesToTrack(fromGray, MOPcornersFrom, MAX_CORNERS, 0.01, 20); 
-		Imgproc.goodFeaturesToTrack(toGray, MOPcornersTo, MAX_CORNERS, 0.01, 20); 
+		Imgproc.goodFeaturesToTrack(fromGray, MOPcornersFrom, MAX_CORNERS, FEATURES_QUALITY, FEATURES_DISTANCE); 
+		Imgproc.goodFeaturesToTrack(toGray, MOPcornersTo, MAX_CORNERS, FEATURES_QUALITY, FEATURES_DISTANCE); 
 
 
 		MOPptsFrom.fromArray(MOPcornersFrom.toArray());  
