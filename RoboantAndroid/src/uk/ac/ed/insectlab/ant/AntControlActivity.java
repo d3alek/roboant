@@ -58,8 +58,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private static final long CAMERA_TIMEOUT = 1000;
 	private final String TAG = AntControlActivity.class.getSimpleName();
 
-	private final String SERVER_IP = "192.168.1.7";
-
+	private final String SERVER_IP = "172.20.152.61";
 	/**
 	 * Driver instance, passed in statically via
 	 * {@link #show(Context, UsbSerialDriver)}.
@@ -599,7 +598,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 	}
 
-	private long ROUTE_PICTURES_DELAY = 1000;
+	private long ROUTE_PICTURES_DELAY = 100;
 	List<Bitmap> mRoutePictures = new LinkedList<Bitmap>();
 	private Runnable mRecordingRunnable;
 	private void postRecordingRunnable() {

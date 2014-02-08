@@ -74,6 +74,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private boolean mLensFound;
 	private Point3 mLens;
 	private Handler mToGetPictureHandler;
+	private Object mPictureLock = new Object();
 
 
 	protected static final int MSG_PICTURE = 0;
@@ -92,7 +93,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		mRgbaSave = new Mat();
 
 		mLens = GLOBAL.getSettings().loadLens();
-		
+
 		if (mLens != null) {
 			mLensFound = true;
 		}
@@ -127,7 +128,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		if (!mLensFound) {
 			List<Point3> circles = detectCircles(mRgba);
 			Mat circleMat = new Mat(mRgba.rows(), mRgba.cols(), mRgba.type());
-			
+
 			if (circles.size() > 0) {
 				Point3 circle = circles.get(0);
 				Core.circle(circleMat, new Point(circle.x, circle.y), (int)circle.z, 
@@ -142,65 +143,67 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 			Mat circleMat = Mat.zeros(mRgba.rows(), mRgba.cols(), mRgba.type());
 			Core.circle(circleMat, new Point(mLens.x, mLens.y), (int)mLens.z, 
 					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
-			
+
 			Core.bitwise_and(circleMat, mRgba, mRgba);
 		}
-//
-//		List<Point3> circles = detectCircles(mRgba);
-//		Mat circleMat = new Mat(mRgba.rows(), mRgba.cols(), mRgba.type());
-//		
-//		if (circles.size() > 0) {
-//			Point3 circle = circles.get(0);
-//			Core.circle(circleMat, new Point(circle.x, circle.y), (int)circle.z, 
-//					new Scalar(new double[] {200.0, 200.0, 200.0, 200.0}), -1);
-//			
-//			Core.bitwise_and(circleMat, mRgba, mRgba);
-//		}
-		
-		
+		//
+		//		List<Point3> circles = detectCircles(mRgba);
+		//		Mat circleMat = new Mat(mRgba.rows(), mRgba.cols(), mRgba.type());
+		//		
+		//		if (circles.size() > 0) {
+		//			Point3 circle = circles.get(0);
+		//			Core.circle(circleMat, new Point(circle.x, circle.y), (int)circle.z, 
+		//					new Scalar(new double[] {200.0, 200.0, 200.0, 200.0}), -1);
+		//			
+		//			Core.bitwise_and(circleMat, mRgba, mRgba);
+		//		}
 
-		Imgproc.resize(mRgba, mRgbaSmall, new Size(mRgba.cols()/DOWNSAMPLE_RATE, mRgba.rows()/DOWNSAMPLE_RATE));
-		mRgba.copyTo(mRgbaSave);
 
-		
-//		if (mToGetPictureHandler != null) {
-////			mPictureListener.pictureReceived(getPanoramicPicture());
-////			mPictureListmToGetPictureHandlerener = null;
-////			mToGetPictureHandler.sendMessage(mToGetPictureHandler.obtainMessage(MSG_PICTURE, getPanoramicPicture()));
-//			GLOBAL.PICTURE_STORAGE = getPanoramicPicture();
-//			GLOBAL.PICTURE_MUTEX.release();
-//			mToGetPictureHandler = null;
-//		}
 
-		calcOpticFlow(mRgbaSmall);
-		drawOpticFlow(mRgba);
-		
-//		Mat gray = new Mat();
-//		Imgproc.cvtColor(mRgba, gray, Imgproc.COLOR_RGBA2GRAY);
-//		
-////		Mat circles = new Mat();
-//		MatOfPoint3f circles = new MatOfPoint3f();
-//		
-//		Imgproc.GaussianBlur(gray, gray, new Size(9, 9), 2, 2);
-//		Imgproc.HoughCircles(gray, circles, Imgproc.CV_HOUGH_GRADIENT, 1, gray.rows()/8, 200, 100, 0, 50);
-////		
-////		circles.toList();
-////		for (int i = 0; i < circles.rows(); ++i) {
-////			circles.
-////		}
-//		
-//		for (Point3 p: circles.toList()) {
-//			Core.circle(gray, new Point(p.x, p.y), (int)p.z, colorGreen);
-//		}
-		
-//		for (int i = 0; i < circles.rows(); ++i) {
-//			Point center = new Point(circles.get(i, 0), circles.get(i, 1));
-//			Core.circle(mRgba, circles.get(i, 2), radius, color);
-//		}
+//		Imgproc.resize(mRgba, mRgbaSmall, new Size(mRgba.cols()/DOWNSAMPLE_RATE, mRgba.rows()/DOWNSAMPLE_RATE));
+		synchronized (mPictureLock) {
+			mRgba.copyTo(mRgbaSave);
+		}
+
+
+		//		if (mToGetPictureHandler != null) {
+		////			mPictureListener.pictureReceived(getPanoramicPicture());
+		////			mPictureListmToGetPictureHandlerener = null;
+		////			mToGetPictureHandler.sendMessage(mToGetPictureHandler.obtainMessage(MSG_PICTURE, getPanoramicPicture()));
+		//			GLOBAL.PICTURE_STORAGE = getPanoramicPicture();
+		//			GLOBAL.PICTURE_MUTEX.release();
+		//			mToGetPictureHandler = null;
+		//		}
+
+		//		calcOpticFlow(mRgbaSmall);
+		//		drawOpticFlow(mRgba);
+
+		//		Mat gray = new Mat();
+		//		Imgproc.cvtColor(mRgba, gray, Imgproc.COLOR_RGBA2GRAY);
+		//		
+		////		Mat circles = new Mat();
+		//		MatOfPoint3f circles = new MatOfPoint3f();
+		//		
+		//		Imgproc.GaussianBlur(gray, gray, new Size(9, 9), 2, 2);
+		//		Imgproc.HoughCircles(gray, circles, Imgproc.CV_HOUGH_GRADIENT, 1, gray.rows()/8, 200, 100, 0, 50);
+		////		
+		////		circles.toList();
+		////		for (int i = 0; i < circles.rows(); ++i) {
+		////			circles.
+		////		}
+		//		
+		//		for (Point3 p: circles.toList()) {
+		//			Core.circle(gray, new Point(p.x, p.y), (int)p.z, colorGreen);
+		//		}
+
+		//		for (int i = 0; i < circles.rows(); ++i) {
+		//			Point center = new Point(circles.get(i, 0), circles.get(i, 1));
+		//			Core.circle(mRgba, circles.get(i, 2), radius, color);
+		//		}
 
 		return mRgba;
 	}
-	
+
 	public void forgetLens() {
 		mLensFound = false;
 	}
@@ -208,24 +211,24 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private static List<Point3> detectCircles(Mat rgba) {
 		Mat gray = new Mat();
 		Imgproc.cvtColor(rgba, gray, Imgproc.COLOR_RGBA2GRAY);
-		
-//		Mat circles = new Mat();
+
+		//		Mat circles = new Mat();
 		MatOfPoint3f circles = new MatOfPoint3f();
-		
+
 		Imgproc.GaussianBlur(gray, gray, new Size(9, 9), 1, 1);
 		Imgproc.HoughCircles(gray, circles, Imgproc.CV_HOUGH_GRADIENT, 1, gray.rows()/10, 200, 40, 0, 0);
-//		
-//		circles.toList();
-//		for (int i = 0; i < circles.rows(); ++i) {
-//			circles.
-//		}
-		
+		//		
+		//		circles.toList();
+		//		for (int i = 0; i < circles.rows(); ++i) {
+		//			circles.
+		//		}
+
 		for (Point3 p: circles.toList()) {
 			Core.circle(rgba, new Point(p.x, p.y), (int)p.z, new Scalar(new double[] {1.0, 200.0, 0.0, 0.0}));
 		}
-		
+
 		return circles.toList();
-		
+
 	}
 
 	private Point multPointScalar(Point point, double scalar) {
@@ -348,34 +351,35 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	}
 
 	private Bitmap getPanoramicPicture() {
-		Log.i(TAG, "Panoramic picture dimensions " + mRgbaSave.cols() + " " + mRgbaSave.rows());
-		Bitmap bmp = Bitmap.createBitmap(mRgbaSave.cols(), mRgbaSave.rows(), Bitmap.Config.ARGB_8888);
-		Utils.matToBitmap(mRgbaSave, bmp);
-
-		return bmp;
+		synchronized (mPictureLock) {
+			Log.i(TAG, "Panoramic picture dimensions " + mRgbaSave.cols() + " " + mRgbaSave.rows());
+			Bitmap bmp = Bitmap.createBitmap(mRgbaSave.cols(), mRgbaSave.rows(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(mRgbaSave, bmp);
+			return bmp;
+		}
 	}
 
 	public Bitmap getPicture() {
 		Log.i(TAG, "getPicture");
-//		mToGetPictureHandler = handler;
+		//		mToGetPictureHandler = handler;
 		return getPanoramicPicture();
 	}
-	
+
 	public double getOpticFlow(Bitmap from, Bitmap to) {
 		Mat fromMat = new Mat();
 		Mat toMat = new Mat();
 		Mat fromGray = new Mat();
 		Mat toGray = new Mat();
-		
+
 		MatOfPoint MOPcornersFrom = new MatOfPoint();
 		MatOfPoint MOPcornersTo = new MatOfPoint();
-		
+
 		MatOfPoint2f MOPptsFrom = new MatOfPoint2f();
 		MatOfPoint2f MOPptsTo = new MatOfPoint2f();
 
 		Utils.bitmapToMat(from, fromMat);
 		Utils.bitmapToMat(to, toMat);
-		
+
 		MatOfByte MOBStatus = new MatOfByte();
 		MatOfFloat MOFerr = new MatOfFloat();
 
@@ -388,14 +392,14 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 
 		MOPptsFrom.fromArray(MOPcornersFrom.toArray());  
 		MOPptsTo.fromArray(MOPcornersTo.toArray());  
-		
+
 		Video.calcOpticalFlowPyrLK(fromGray, toGray, MOPptsFrom, MOPptsTo, MOBStatus, MOFerr);  
 
 		List<Point> cornersFrom = MOPptsFrom.toList();  
 		List<Point> cornersTo = MOPptsTo.toList();  
 		List<Byte> byteStatus = MOBStatus.toList();  
-		
-		
+
+
 		int bytesSet = 0;
 		double totalFlow = 0;
 
@@ -409,11 +413,11 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 
 				//				avgFlow += Math.sqrt((pt.x - pt2.x)*(pt.x - pt2.x)
 				//						+ (pt.y - pt2.y)*(pt.y - pt2.y));
-//				if (pt.x < fromGray.rows()/2) {
-//					flowX += pt.x - pt2.x;
-//					flowY += pt.y - pt2.y;
-//					bytesSetTop++;
-//				}
+				//				if (pt.x < fromGray.rows()/2) {
+				//					flowX += pt.x - pt2.x;
+				//					flowY += pt.y - pt2.y;
+				//					bytesSetTop++;
+				//				}
 				bytesSet++;
 
 				totalFlow += distPoints(pt, pt2);
@@ -422,23 +426,23 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		}  
 		if (bytesSet > 0) {
 			return totalFlow / bytesSet;
-//			Point avgFlow = new Point(flowX / bytesSetTop, flowY / bytesSetTop);
-//			Log.i(TAG, "Avg flow is " + avgFlow.x + " " + avgFlow.y);
-//
-//			Point showFlowFrom, showFlowTo;
-//
-//			showFlowFrom = new Point(mRgba.cols()/2., mRgba.rows()/2.);
-//			showFlowTo = new Point(showFlowFrom.x + avgFlow.x, showFlowFrom.y + avgFlow.y);
-//
-//			Core.line(mRgba, showFlowFrom, showFlowTo, colorGreen, iLineThickness+1);
-//
-//			mFlow = avgFlow;
-//			mTotalFlow = totalFlow/bytesSet;
-//			if (mFlowListener != null) {
-//				if (!mFlowListener.flowChanged(mTotalFlow)) {
-//					mFlowListener = null;
-//				}
-//			}
+			//			Point avgFlow = new Point(flowX / bytesSetTop, flowY / bytesSetTop);
+			//			Log.i(TAG, "Avg flow is " + avgFlow.x + " " + avgFlow.y);
+			//
+			//			Point showFlowFrom, showFlowTo;
+			//
+			//			showFlowFrom = new Point(mRgba.cols()/2., mRgba.rows()/2.);
+			//			showFlowTo = new Point(showFlowFrom.x + avgFlow.x, showFlowFrom.y + avgFlow.y);
+			//
+			//			Core.line(mRgba, showFlowFrom, showFlowTo, colorGreen, iLineThickness+1);
+			//
+			//			mFlow = avgFlow;
+			//			mTotalFlow = totalFlow/bytesSet;
+			//			if (mFlowListener != null) {
+			//				if (!mFlowListener.flowChanged(mTotalFlow)) {
+			//					mFlowListener = null;
+			//				}
+			//			}
 		}
 		return 0;
 	}

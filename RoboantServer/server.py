@@ -158,7 +158,7 @@ def deleteCurrentImages():
     for fname in os.listdir('.'):
         if re.search(r'image_(-?\d+)', fname):
             os.remove(os.path.join('.', fname))
-    mTurnSSD = {}
+    #mTurnSSD = {}
     mRouteSSD = {}
         
 
@@ -210,6 +210,8 @@ class AntRobotControl(LineReceiver):
             routeNum = int(m.group(2))
             ssd = int(float(m.group(3)))
             print "SSD", str(deg), str(routeNum), str(ssd)
+            if mTurnSSD.has_key(deg):
+                mTurnSSD.clear()
             mTurnSSD[deg] = (ssd, routeNum)
             mRouteSSD[routeNum] = (ssd, deg)
 
@@ -272,7 +274,8 @@ def draw_graph():
 
     points = []
     for key in sorted(mTurnSSD.keys()):
-        points += [(key * 5 + screenWidth/2, mTurnSSD[key][0]/100000)]
+        #points += [(key * 5 + screenWidth/2, mTurnSSD[key][0]/100000)]
+        points += [(key * 5, mTurnSSD[key][0]/100000)]
         #pygame.draw.circle(screen, (255, 255, 255), (key*5 + screenWidth/2,
                                                      #mTurnSSD[key][0]/100000), 20, 0)
     if len(points) > 1:

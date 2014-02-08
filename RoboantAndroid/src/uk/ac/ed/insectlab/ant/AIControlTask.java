@@ -5,14 +5,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
-import uk.ac.ed.insectlab.ant.RoboPicture.PictureType;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.provider.Settings.Global;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -31,7 +31,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 	private static final int TURN_SPEED = 100;
 
-	private static final boolean AWAIT_CONFIRM = true;
+	private static final boolean AWAIT_CONFIRM = false;
 
 
 	double OPTIC_FLOW_TURN = 10/360.;
@@ -147,14 +147,14 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		while(!mHandlerThread.isAlive()) {};  
 		mHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
-			
+
 			@Override
 			public boolean handleMessage(Message msg) {
 				switch (msg.arg1) {
 				case OpenCVCamera.MSG_PICTURE:
 					mTakePictureBuffer = (Bitmap)msg.obj;
 
-//					releaseLock();
+					//					releaseLock();
 					return true;
 				}
 				return false;
@@ -167,16 +167,16 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			if (mFollowingRoute) {
 				int counter = 0;
 
-				for (int i = 0; i < mRoutePictures.size(); ++i) {
-					Bitmap bmp = mRoutePictures.get(i);
-					//					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.GoTowards, i));
-					try {
-						Thread.sleep(1000);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
+				//				for (int i = 0; i < mRoutePictures.size(); ++i) {
+				//					Bitmap bmp = mRoutePictures.get(i);
+				//					//					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.GoTowards, i));
+				//					try {
+				//						Thread.sleep(1000);
+				//					} catch (InterruptedException e) {
+				//						// TODO Auto-generated catch block
+				//						e.printStackTrace();
+				//					}
+				//				}
 
 				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
 					Log.i(TAG, "Following Route loop " + counter++);
@@ -210,7 +210,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			}
 		}
 	}
-	
+
 	@Override
 	protected void onPostExecute(Void result) {
 		Log.i(TAG, "onPostExecute");
@@ -223,7 +223,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		steps.add(new TurnStep(bmp, 0));
 		//		mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.LookAround, 0));
 		int rotate_step = 1;
-		int rotate_until = 60;
+		int rotate_until = 20;
 		for (int rotate = rotate_step; rotate < rotate_until; rotate += rotate_step) {
 			Bitmap bmpRot = Util.rotateBitmap(bmp, rotate);
 			steps.add(new TurnStep(bmpRot, rotate));
@@ -376,6 +376,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards) {
 
 		Log.i(TAG, "Turn pictures: " + turnsteps.size() + " moveTowards pictures " + moveTowards.size());
+		Log.i(TAG, "Total to evaluate: " + turnsteps.size() * moveTowards.size());
 
 		int picNum;
 		double minTurnDist, minRoutePicDist, dist;
@@ -394,7 +395,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			bestPicTowards = null;
 			for (Bitmap routePic: moveTowards) {
 				dist = imagesSSD(routePic, bmp);
-				Log.i(TAG, "Dist is " + dist);
+//				Log.i(TAG, "Dist is " + dist);
 				if (dist < minRoutePicDist) {
 					minRoutePicDist = dist;
 					currentMinRouteStep = picNum;  
@@ -403,7 +404,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				}
 				picNum += 1;
 			}
-			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(turnsteps.get(turnNum).deg, currentMinRouteStep, minRoutePicDist));
+			//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(turnsteps.get(turnNum).deg, currentMinRouteStep, minRoutePicDist));
 			if (minRoutePicDist < minTurnDist) {
 				minTurnDist = minRoutePicDist;
 				minTurnPic = bmp;
@@ -437,19 +438,193 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 
 		Log.i(TAG, "Turning to " + turnTo);
+		doTurnUntilPic(minTurnPic, turnTo);
 
-		//		doTurn(turnTo);
-		doTurnUntil(minTurnPic, turnTo);
+		//		if (AWAIT_CONFIRM) {
+		//			waitLock();
+		//		}
+		//
+		//
+		//		//		doTurn(turnTo);
+		//		doTurnUntil(minTurnPic, turnTo);
 		//		doTurnUntilFlow(minTurnPic, turnTo < 0 ? -1 : 1);
 
-//		mRoboAntControl.setSpeeds(100, 100);
+		mRoboAntControl.setSpeeds(100, 100);
+
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		mRoboAntControl.setSpeeds(0, 0);
+	}
 //
-//		try {
-//			Thread.sleep(1000);
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
+//	private void showTurningSlope() {
+//		//		Bitmap bmp = Util.rotateBitmap(takePicture(), 40);
+//		Bitmap bmp = takePicture();
+//		Bitmap compareTo = Util.rotateBitmap(mCompareToBmp, 40);
+//
+//		double prevDif = 0;
+//		double curDif = imagesSSD(bmp, compareTo);
+//
+//		int dir = 1;
+//
+//		bmp.recycle();
+//
+//		int turnSpeed = 100, turnTime = 100;
+//		int thresh = 3000000;
+//		int deg = 0;
+//		double bestDif = curDif;
+//		int bestAt = deg;
+//
+//		//		doTurn(dir * TURN_STEP);
+//		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
+//		Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif);
+//		while (deg < 50) {
+//			deg += dir;
+//
+//			//			try {
+//			//				Thread.sleep(200);
+//			//			}
+//			//			catch (InterruptedException e) {
+//			//				e.printStackTrace();
+//			//			}
+//			//			doTurn(turnStep);
+//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+//			bmp = takePicture();
+//			prevDif = curDif;
+//			curDif = imagesSSD(bmp, compareTo);
+//			if (curDif < bestDif) {
+//				bestDif = curDif;
+//				bestAt = deg;
+//			}
+//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
+//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
+//			bmp.recycle();
 //		}
-//		mRoboAntControl.setSpeeds(0, 0);
+//
+//		int smooth_by = 5;
+//		DescriptiveStatistics stats = new DescriptiveStatistics();
+//		stats.setWindowSize(smooth_by);
+//		stats.addValue(curDif);
+//
+//		dir = -1;
+//		while (deg > -100) {
+//			deg += dir;
+//
+//			//			try {
+//			//				Thread.sleep(200);
+//			//			}
+//			//			catch (InterruptedException e) {
+//			//				e.printStackTrace();
+//			//			}
+//			//			doTurn(turnStep);
+//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+//			bmp = takePicture();
+//			prevDif = curDif;
+//			curDif = imagesSSD(bmp, mCompareToBmp);
+//			if (curDif < bestDif) {
+//				bestDif = curDif;
+//				bestAt = deg;
+//			}
+//			stats.addValue(curDif);
+//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, stats.getMean()));
+//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
+//			bmp.recycle();
+//		}
+//	}
+
+	private void doTurnUntilPic(Bitmap turnTo, int initialDir) {
+		Bitmap bmp = takePicture();
+		//		Bitmap compareTo = Util.rotateBitmap(mCompareToBmp, 40);
+
+		double prevDif = 0;
+		double curDif = imagesSSD(bmp, turnTo);
+
+		int dir = initialDir > 0 ? 1 : -1;
+
+		bmp.recycle();
+
+		int turnSpeed = 80, turnTime = 100;
+		int deg = 0;
+		double bestDif = curDif;
+		int bestAt = deg;
+
+		double thisMean, prevMean;
+
+		//		doTurn(dir * TURN_STEP);
+		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
+		Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif);
+
+		int smooth_by = 5;
+		DescriptiveStatistics stats = new DescriptiveStatistics();
+		stats.setWindowSize(smooth_by);
+		stats.addValue(curDif);
+
+		thisMean = stats.getMean();
+		prevMean = thisMean;
+		double meanMax = thisMean;
+		double thresh = 100000;
+		//		double thresh = 10000000;
+		double stopThresh = 100000;
+
+		boolean peak1 = false;
+		int count = 0;
+		while (true) {
+			if (mStop) {
+				break;
+			}
+			deg += dir;
+
+			//			try {
+			//				Thread.sleep(200);
+			//			}
+			//			catch (InterruptedException e) {
+			//				e.printStackTrace();
+			//			}
+			//			doTurn(turnStep);
+			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+			bmp = takePicture();
+			prevDif = curDif;
+			prevMean = thisMean;
+			curDif = imagesSSD(bmp, turnTo);
+			if (curDif < bestDif) {
+				bestDif = curDif;
+				bestAt = deg;
+			}
+			stats.addValue(curDif);
+			thisMean = stats.getMean();
+			if (peak1 && meanMax - thisMean < stopThresh) {
+				break;
+			}
+			if (thisMean < meanMax) {
+				meanMax = thisMean;
+			}
+			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(count++, 0, thisMean));
+
+			if (!peak1 && stats.getN() >= smooth_by && thisMean > prevMean && (thisMean - prevMean) > thresh) {
+				//				if (peak1) {
+				//					mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, 2*turnTime);
+				//					bmp = takePicture();
+				//					curDif = imagesSSD(bmp, turnTo);
+				//					stats.addValue(curDif);
+				//					thisMean = stats.getMean();
+				//					mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(count+10, 0, thisMean));
+				//					break;
+				//				}
+				dir = -dir;
+				peak1 = true;
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
+			bmp.recycle();
+		}
 	}
 
 	private void doTurnUntilFlow(Bitmap untilBmp, int initialDir) {
@@ -510,7 +685,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		bmp.recycle();
 
 		int turnSpeed = 80, turnTime = 100;
-		int thresh = 1000000;
+		int thresh = 3000000;
 		int deg = 0;
 
 		//		doTurn(dir * TURN_STEP);
@@ -578,44 +753,44 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mTakePictureBuffer = null;
 		// critical start
 		return mCameraControl.getPicture();
-//		mCameraControl.getPicture(new OpenCVCamera.PictureListener() {
-//
-//			@Override
-//			public void pictureReceived(final Bitmap picture) {
-//				Log.i(TAG, "pictureReceived " + picture);
-//
-////				GLOBAL.PICTURE_STORAGE = picture;
-////				GLOBAL.PICTURE_MUTEX.release();
-//				mHandler.
-//				Log.i(TAG, "Released mutex " + Thread.currentThread().getName());
-//			}
-//		});
-		
-//		try {
-//			GLOBAL.PICTURE_MUTEX.acquire();
-//		} catch (InterruptedException e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
-//		synchronized (lock) {
-//			try {
-//				lock.wait();
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//
-//		try {
-//			Log.i(TAG, "Acquiring mutex " + Thread.currentThread().getName() + " " + GLOBAL.PICTURE_MUTEX.availablePermits());
-//			GLOBAL.PICTURE_MUTEX.acquire();
-//			Log.i(TAG, "Acquired mutex " + Thread.currentThread().getName());
-//			return GLOBAL.PICTURE_STORAGE;
-//		} catch (InterruptedException e) {
-//			Log.i(TAG, "Interrupted");
-//			e.printStackTrace();
-//		}
-//		Bitmap bmp = Bitmap.createBitmap(GLOBAL.PICTURE_STORAGE);
-//		return bmp;
+		//		mCameraControl.getPicture(new OpenCVCamera.PictureListener() {
+		//
+		//			@Override
+		//			public void pictureReceived(final Bitmap picture) {
+		//				Log.i(TAG, "pictureReceived " + picture);
+		//
+		////				GLOBAL.PICTURE_STORAGE = picture;
+		////				GLOBAL.PICTURE_MUTEX.release();
+		//				mHandler.
+		//				Log.i(TAG, "Released mutex " + Thread.currentThread().getName());
+		//			}
+		//		});
+
+		//		try {
+		//			GLOBAL.PICTURE_MUTEX.acquire();
+		//		} catch (InterruptedException e1) {
+		//			// TODO Auto-generated catch block
+		//			e1.printStackTrace();
+		//		}
+		//		synchronized (lock) {
+		//			try {
+		//				lock.wait();
+		//			} catch (InterruptedException e) {
+		//				e.printStackTrace();
+		//			}
+		//		}
+		//
+		//		try {
+		//			Log.i(TAG, "Acquiring mutex " + Thread.currentThread().getName() + " " + GLOBAL.PICTURE_MUTEX.availablePermits());
+		//			GLOBAL.PICTURE_MUTEX.acquire();
+		//			Log.i(TAG, "Acquired mutex " + Thread.currentThread().getName());
+		//			return GLOBAL.PICTURE_STORAGE;
+		//		} catch (InterruptedException e) {
+		//			Log.i(TAG, "Interrupted");
+		//			e.printStackTrace();
+		//		}
+		//		Bitmap bmp = Bitmap.createBitmap(GLOBAL.PICTURE_STORAGE);
+		//		return bmp;
 
 	}
 
