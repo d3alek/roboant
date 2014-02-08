@@ -208,8 +208,8 @@ class AntRobotControl(LineReceiver):
         if m:
             deg = int(m.group(1))
             routeNum = int(m.group(2))
-            ssd = m.group(3)
-            print "SSD", str(deg), str(routeNum), ssd
+            ssd = int(float(m.group(3)))
+            print "SSD", str(deg), str(routeNum), str(ssd)
             mTurnSSD[deg] = (ssd, routeNum)
             mRouteSSD[routeNum] = (ssd, deg)
 
@@ -263,6 +263,22 @@ maxImageNum = 0
 mFont = pygame.font.Font(None, 36)
 
 textColor = (0, 160, 0)
+
+def draw_graph():
+    global mTurnSSD
+
+    
+    screen.fill(pygame.Color(0, 0, 0))
+
+    points = []
+    for key in sorted(mTurnSSD.keys()):
+        points += [(key * 5 + screenWidth/2, mTurnSSD[key][0]/100000)]
+        #pygame.draw.circle(screen, (255, 255, 255), (key*5 + screenWidth/2,
+                                                     #mTurnSSD[key][0]/100000), 20, 0)
+    if len(points) > 1:
+        pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
+
+    pygame.display.update()
 
 def images_tick():
     global imageGoTowardsPosition, picturesChanged, imageSize
@@ -489,8 +505,11 @@ tick.start(0.01)
 tick2 = LoopingCall(send_tick)
 tick2.start(0.3)
 
-tick3 = LoopingCall(images_tick)
-tick3.start(1/30.)
+#tick3 = LoopingCall(images_tick)
+#tick3.start(1/10.)
+
+tick4 = LoopingCall(draw_graph)
+tick4.start(1);
 
 
 reactor.run()

@@ -60,9 +60,10 @@ public class TcpClient implements NetworkControl {
 		synchronized (mSendingLock) {
 
 			if (!mSendingPicture && mSendingQueue.isEmpty()) {
-				mBufferOut.println(message);
-				mBufferOut.flush();
+
 				if (mBufferOut != null && !mBufferOut.checkError()) {
+					mBufferOut.println(message);
+					mBufferOut.flush();
 					if (message.startsWith(NetworkControl.NEW_LOOK_AROUND)) {
 						mSendingBlock = true;
 						Log.i(TAG, "Block sending");
@@ -332,7 +333,7 @@ public class TcpClient implements NetworkControl {
 		@Override
 		protected void onPostExecute(Void result) {
 			mHandler.postDelayed(new Runnable() {
-				
+
 				@Override
 				public void run() {
 					mSendingPicture = false;

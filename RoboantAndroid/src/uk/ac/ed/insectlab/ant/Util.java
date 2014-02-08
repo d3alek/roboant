@@ -17,6 +17,7 @@ import android.graphics.Bitmap.Config;
 import android.graphics.BitmapFactory;
 import android.graphics.BitmapFactory.Options;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.PorterDuff.Mode;
 import android.graphics.PorterDuffXfermode;
@@ -241,6 +242,15 @@ camera.startPreview();
 
 	public static String newLookAroundSSDMessage(int turnDeg, int routeStep, double dist) {
 		return NetworkControl.SSD_MESSAGE + " " + turnDeg + " " + routeStep + " " + dist;
+	}
+
+	public static Bitmap rotateBitmap(Bitmap bmp, int rotate) {
+		Bitmap targetBitmap = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), bmp.getConfig());
+		Canvas canvas = new Canvas(targetBitmap);
+		Matrix matrix = new Matrix();
+		matrix.setRotate(rotate, bmp.getWidth()/2, bmp.getHeight()/2);
+		canvas.drawBitmap(bmp, matrix, new Paint());
+		return targetBitmap;
 	}
 
 //	public static int compareAngles(int deg1, int deg2) {

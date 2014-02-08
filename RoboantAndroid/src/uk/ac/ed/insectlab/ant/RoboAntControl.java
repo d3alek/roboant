@@ -1,15 +1,12 @@
 package uk.ac.ed.insectlab.ant;
 
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
-import android.widget.TextView;
 
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-public class RoboAntControl {
+public class RoboAntControl implements ArduinoZumoControl {
 	private int mRightSpeed;
 	private int mLeftSpeed;
 	private SerialInputOutputManager mSerialIoManager;
@@ -23,10 +20,19 @@ public class RoboAntControl {
 	private static final String TAG = "RoboAntControl";
 	private static final int DIR_THRESHOLD = 8;
 
+	private HandlerThread mHandlerThread;
+
+	private Handler mHandler;
+
 	int TURN_SPEED = 80;
 
 	public RoboAntControl(SerialInputOutputManager sm) {
 		mSerialIoManager = sm;
+		mHandlerThread = new HandlerThread("ai_control_handler");
+		mHandlerThread.start();
+
+		while(!mHandlerThread.isAlive()) {};  
+		mHandler = new Handler(mHandlerThread.getLooper(), null);
 	}
 
 	@Deprecated
@@ -54,7 +60,8 @@ public class RoboAntControl {
 		mLeftSpeed = speed; 
 		sendSpeeds();
 	}
-
+	
+	@Override
 	public void doLookAroundStep(LookAroundListener listener) {
 		Log.i(TAG, "doLookAroundStep " + mLookingAround);
 		if (!mLookingAround) {
@@ -96,7 +103,7 @@ public class RoboAntControl {
 
 	private int relativeHeading(int fromDeg, int toDeg) {
 		int relativeHeading = toDeg - fromDeg;
-		
+
 		if (relativeHeading > 180) {
 			relativeHeading -= 360;
 		}
@@ -108,19 +115,51 @@ public class RoboAntControl {
 	}
 
 	public int getDirection() {
-//		int dir = (int)(Math.toDegrees(azimut + mDirectionAdjustment));
+		//		int dir = (int)(Math.toDegrees(azimut + mDirectionAdjustment));
 		int dir = (int)Math.toDegrees(azimut); //TODO: average over n azimuts
-		
-//		if (dir < -180) {
-//			dir = 360 + dir;
-//		}
-		
-//		if (dir < -180) {
-//			dir = 360 + dir;
-//		}
-//		if (dir < 0) {
-//			dir += 360;
-//		}
+
+		//		if (dir < -180) {
+		//			dir = 360 + dir;
+		//		}
+
+		//		if (dir < -180) {
+		//			dir = 360 + dir;
+		//		}
+		//		if (dir < 0) {
+		//			dir += 360;
+		//		}
 		return dir;
+	}
+
+	public void simpleTurnInPlace(final int turnSpeed,  final int turnTime) {
+		mHandler.post(new Runnable() {
+
+			@Override
+			public void run() {
+				setSpeeds(turnSpeed, -turnSpeed);
+			}
+		});
+
+		mHandler.postDelayed(new Runnable() {
+
+			@Override
+			public void run() {
+				setSpeeds(0, -0);
+			}
+		}, turnTime);
+	}
+
+	public void simpleTurnInPlaceBlocking(final int turnSpeed,  final int turnTime) {
+
+		setSpeeds(turnSpeed, -turnSpeed);
+
+		try {
+			Thread.sleep(turnTime);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+		setSpeeds(0, -0);
+
 	}
 }

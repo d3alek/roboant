@@ -2,12 +2,12 @@ package uk.ac.ed.insectlab.ant;
 
 import android.os.AsyncTask;
 
-class MotorTestTask extends AsyncTask<RoboAntControl, Void, Void> {
+class MotorTestTask extends AsyncTask<ArduinoZumoControl, Void, Void> {
 
-    RoboAntControl mRoboAntControl;
+    ArduinoZumoControl mRoboAntControl;
 
     @Override
-    protected Void doInBackground(RoboAntControl... params) {
+    protected Void doInBackground(ArduinoZumoControl... params) {
         mRoboAntControl = params[0];
 
         for (int speed = 0; speed <= 400; speed++)

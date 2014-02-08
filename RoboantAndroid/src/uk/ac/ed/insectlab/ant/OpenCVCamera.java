@@ -20,6 +20,7 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.video.Video;
 
 import android.graphics.Bitmap;
+import android.os.Handler;
 import android.util.Log;
 
 public class OpenCVCamera implements CvCameraViewListener2 {
@@ -72,6 +73,10 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private PictureListener mPictureListener;
 	private boolean mLensFound;
 	private Point3 mLens;
+	private Handler mToGetPictureHandler;
+
+
+	protected static final int MSG_PICTURE = 0;
 
 	@Override
 	public void onCameraViewStarted(int width, int height) {
@@ -158,10 +163,14 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		mRgba.copyTo(mRgbaSave);
 
 		
-		if (mPictureListener != null) {
-			mPictureListener.pictureReceived(getPanoramicPicture());
-			mPictureListener = null;
-		}
+//		if (mToGetPictureHandler != null) {
+////			mPictureListener.pictureReceived(getPanoramicPicture());
+////			mPictureListmToGetPictureHandlerener = null;
+////			mToGetPictureHandler.sendMessage(mToGetPictureHandler.obtainMessage(MSG_PICTURE, getPanoramicPicture()));
+//			GLOBAL.PICTURE_STORAGE = getPanoramicPicture();
+//			GLOBAL.PICTURE_MUTEX.release();
+//			mToGetPictureHandler = null;
+//		}
 
 		calcOpticFlow(mRgbaSmall);
 		drawOpticFlow(mRgba);
@@ -267,7 +276,6 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		}  
 		if (bytesSet > 0) {
 			Point avgFlow = new Point(flowX / bytesSetTop, flowY / bytesSetTop);
-			Log.i(TAG, "Avg flow is " + avgFlow.x + " " + avgFlow.y);
 
 			Point showFlowFrom, showFlowTo;
 
@@ -347,9 +355,10 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 		return bmp;
 	}
 
-	public void getPicture(PictureListener listener) {
+	public Bitmap getPicture() {
 		Log.i(TAG, "getPicture");
-		mPictureListener = listener;
+//		mToGetPictureHandler = handler;
+		return getPanoramicPicture();
 	}
 	
 	public double getOpticFlow(Bitmap from, Bitmap to) {

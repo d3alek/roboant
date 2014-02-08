@@ -58,7 +58,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private static final long CAMERA_TIMEOUT = 1000;
 	private final String TAG = AntControlActivity.class.getSimpleName();
 
-	private final String SERVER_IP = "172.20.155.228";
+	private final String SERVER_IP = "192.168.1.7";
 
 	/**
 	 * Driver instance, passed in statically via
@@ -107,7 +107,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private EditText mServerIP;
 	private EditText mServerPort;
 
-	private RoboAntControl mRoboAntControl;
+	private ArduinoZumoControl mRoboAntControl;
 
 	private Pattern mSpeedPattern = Pattern.compile("l(-?\\d+)r(-?\\d+)");
 
@@ -141,7 +141,70 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.serial_console);
+		
+		mRoboAntControl = new ArduinoZumoControl() {
 
+			@Override
+			public void setSpeeds(int turnSpeed, int i) {
+				Log.i(TAG, "Dummy setSpeeds");
+			}
+
+			@Override
+			public void simpleTurnInPlaceBlocking(int i, int turnTime) {
+				Log.i(TAG, "Dummy simpleTurnInPlaceBlocking");
+				
+			}
+
+			@Override
+			public void doGoTowards(LookAroundListener aiControlTask,
+					int minStep) {
+				Log.i(TAG, "Dummy doGoTowards");
+				
+			}
+
+			@Override
+			public void doLookAroundStep(LookAroundListener aiControlTask) {
+				Log.i(TAG, "Dummy doLookAroundStep");
+				
+			}
+
+			@Override
+			public void setLeftSpeed(int speed) {
+				Log.i(TAG, "Dummy setLeftSpeed");
+				
+			}
+
+			@Override
+			public void setRightSpeed(int speed) {
+				Log.i(TAG, "Dummy setRightSpeed");
+			}
+
+			@Override
+			public void calibrate() {
+				Log.i(TAG, "Dummy calibrate");
+				
+			}
+
+			@Override
+			public void lookAroundDone() {
+				Log.i(TAG, "Dummy lookAroundDone");
+				
+			}
+
+			@Override
+			public void goTowardsDone() {
+				Log.i(TAG, "Dummy goTowardsDone");
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void lookAroundStepDone(int parseInt) {
+				Log.i(TAG, "Dummy lookAroundStepDone");
+				
+			}
+			
+		};
 		mCurrentStepPic = (ImageView)findViewById(R.id.pic_current_step);
 		mStepTowardsPic = (ImageView)findViewById(R.id.pic_step_towards);
 
@@ -228,7 +291,6 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 
 
 		mOpenCvCameraView.setCvCameraViewListener(mCamera);
-
 	}
 
 	private void takePicture() {
@@ -237,22 +299,26 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 				takeAIPicture();
 			}
 			else {
-
-				mCamera.getPicture(new OpenCVCamera.PictureListener() {
-					@Override
-					public void pictureReceived(final Bitmap picture) {
-						handler.post(new Runnable() {
-
-							@Override
-							public void run() {
-								mStepTowardsPic.setImageBitmap(picture);
-
-							}
-						});
-					}
-				});
+//				mCamera.getPicture(new OpenCVCamera.PictureListener() {
+//					@Override
+//					public void pictureReceived(final Bitmap picture) {
+//						handler.post(new Runnable() {
+//
+//							@Override
+//							public void run() {
+//								mStepTowardsPic.setImageBitmap(picture);
+//
+//							}
+//						});
+//					}
+//				});
+				mStepTowardsPic.setImageBitmap(getCameraPicture());
 			}
 		}
+	}
+
+	private Bitmap getCameraPicture() {
+		return mCamera.getPicture();
 	}
 
 	private void showRouteSelectionDialog() {
@@ -552,12 +618,13 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 					}
 
 					mRecordingRunnable = this;
-					mCamera.getPicture(new OpenCVCamera.PictureListener() {
-						@Override
-						public void pictureReceived(Bitmap picture) {
-							mRoutePictures.add(picture);
-						}
-					});
+					mRoutePictures.add(getCameraPicture());
+//					mCamera.getPicture(new OpenCVCamera.PictureListener() {
+//						@Override
+//						public void pictureReceived(Bitmap picture) {
+//							mRoutePictures.add(picture);
+//						}
+//					});
 					try {
 						handler.postDelayed(this, ROUTE_PICTURES_DELAY);
 					}
