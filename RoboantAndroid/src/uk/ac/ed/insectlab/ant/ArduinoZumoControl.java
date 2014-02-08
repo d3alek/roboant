@@ -4,7 +4,7 @@ public interface ArduinoZumoControl {
 
 	void setSpeeds(int turnSpeed, int i);
 
-	void simpleTurnInPlaceBlocking(int i, int turnTime);
+	void simpleTurnInPlaceBlocking(int speed, int turnTime);
 
 	void doGoTowards(LookAroundListener aiControlTask, int minStep);
 

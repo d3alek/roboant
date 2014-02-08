@@ -372,6 +372,80 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		waitLock();
 
 	}
+	
+	private void moveTowardsMinRealtime(List<Bitmap> moveTowards) {
+		
+		// forward 
+		Bitmap bForward = takePicture();
+		
+		// right 
+		mRoboAntControl.simpleTurnInPlaceBlocking(80, 100);
+		Bitmap bRight = takePicture();
+		
+		// left 
+		mRoboAntControl.simpleTurnInPlaceBlocking(80, 200);
+		Bitmap bLeft = takePicture();
+		
+		double minLeft, minRight, minForward;
+		int minPicLeft, minPicRight, minPicForward;
+		int routePicNum = 0;
+		minLeft = minRight = minForward = 1000000000;
+		minPicLeft = minPicRight = minPicForward = -1;
+		
+		for (Bitmap routeBmp : moveTowards) {
+			
+			double ssdLeft = imagesSSD(routeBmp, bLeft);
+			double ssdRight = imagesSSD(routeBmp, bRight);
+			double ssdForward = imagesSSD(routeBmp, bForward);
+			
+			if (minLeft > ssdLeft) {
+				minLeft = ssdLeft;
+				minPicLeft = routePicNum;
+			}
+			
+			if (minRight > ssdRight) {
+				minRight = ssdRight;
+				minPicRight = routePicNum;
+			}
+			
+			if (minForward > ssdForward) {
+				minForward = ssdForward;
+				minPicForward = routePicNum;
+			}
+			
+			routePicNum ++;
+		}
+		
+		Log.i(TAG, "mins (L, R, F)" + minLeft + " " + minRight + " " + minForward);
+		Log.i(TAG, "routeNums (L, R, F)" + minPicLeft + " " + minPicRight + " " + minPicForward);
+		
+		if (minLeft < minRight) {
+			if (minLeft < minForward) {
+				doTurnUntilPic(bLeft, -1);
+			}
+			else {
+//				doTurnUntilPic(bForward, 0);
+				// skip turning
+			}
+		}
+		else {
+			if (minRight < minForward) {
+				doTurnUntilPic(bRight, 1);
+			}
+			else {
+				// skip turning
+			}
+		}
+		
+		mRoboAntControl.setSpeeds(100, 100);
+
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		mRoboAntControl.setSpeeds(0, 0);
+	}
 
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards) {
 
@@ -438,6 +512,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 
 		Log.i(TAG, "Turning to " + turnTo);
+//		doTurnUntilPic(Util.rotateBitmap(minTurnPic, -45), -45);
 		doTurnUntilPic(minTurnPic, turnTo);
 
 		//		if (AWAIT_CONFIRM) {
@@ -541,7 +616,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		double prevDif = 0;
 		double curDif = imagesSSD(bmp, turnTo);
 
-		int dir = initialDir > 0 ? 1 : -1;
+		int dir = initialDir >= 0 ? 1 : -1;
 
 		bmp.recycle();
 
@@ -552,11 +627,10 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		double thisMean, prevMean;
 
-		//		doTurn(dir * TURN_STEP);
 		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
 		Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif);
 
-		int smooth_by = 5;
+		int smooth_by = 80;
 		DescriptiveStatistics stats = new DescriptiveStatistics();
 		stats.setWindowSize(smooth_by);
 		stats.addValue(curDif);
@@ -564,12 +638,21 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		thisMean = stats.getMean();
 		prevMean = thisMean;
 		double meanMax = thisMean;
-		double thresh = 100000;
+//		double thresh = 100000;
+		double thresh = 6000;
+		double minThresh = 200;
 		//		double thresh = 10000000;
-		double stopThresh = 100000;
+		double stopThresh = 400000;
 
 		boolean peak1 = false;
 		int count = 0;
+		
+		int messageCount = 0;
+		int sendMessageEvery = 20;
+		
+		int changedDir = 0;
+		int maxChangedDir = 10;
+		mRoboAntControl.setSpeeds(dir*turnSpeed, -dir*turnSpeed);
 		while (true) {
 			if (mStop) {
 				break;
@@ -583,7 +666,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			//				e.printStackTrace();
 			//			}
 			//			doTurn(turnStep);
-			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
 			bmp = takePicture();
 			prevDif = curDif;
 			prevMean = thisMean;
@@ -594,15 +677,25 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			}
 			stats.addValue(curDif);
 			thisMean = stats.getMean();
-			if (peak1 && meanMax - thisMean < stopThresh) {
+			if (peak1 && Math.abs(meanMax - thisMean) < stopThresh) {
 				break;
+//				continue;
 			}
 			if (thisMean < meanMax) {
 				meanMax = thisMean;
 			}
-			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(count++, 0, thisMean));
+			count++;
+			if (count % sendMessageEvery == 0) {
+                mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount++, 0, thisMean));
+			}
 
-			if (!peak1 && stats.getN() >= smooth_by && thisMean > prevMean && (thisMean - prevMean) > thresh) {
+			Log.i(TAG, "Skewness " + stats.getSkewness());
+			if (stats.getN() == smooth_by && thisMean > prevMean && (thisMean - prevMean) > thresh) {
+//			thisSkewness = stats.getSkewness();
+//			prevSkewness = stats.getSkewness();
+//			stats.get
+//			if (stats.getN() > smooth_by && Math.abs(thisMean - prevMean) < minThresh) {
+//			if (stats.getN() > smooth_by && Math.abs(stats.getSkewness()) < 0.5) {
 				//				if (peak1) {
 				//					mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, 2*turnTime);
 				//					bmp = takePicture();
@@ -612,7 +705,14 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				//					mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(count+10, 0, thisMean));
 				//					break;
 				//				}
+				changedDir++;
+				if (changedDir > maxChangedDir) {
+					Log.i(TAG, "maxChangedDir reached");
+					break;
+				}
 				dir = -dir;
+				Log.i(TAG, "peak1 true");
+				mRoboAntControl.setSpeeds(dir*turnSpeed, -dir*turnSpeed);
 				peak1 = true;
 				try {
 					Thread.sleep(200);
@@ -621,10 +721,12 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					e.printStackTrace();
 				}
 			}
+			
 
 			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
 			bmp.recycle();
 		}
+		mRoboAntControl.setSpeeds(0, 0);
 	}
 
 	private void doTurnUntilFlow(Bitmap untilBmp, int initialDir) {

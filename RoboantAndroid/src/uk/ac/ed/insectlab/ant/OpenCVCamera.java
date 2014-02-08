@@ -59,7 +59,7 @@ public class OpenCVCamera implements CvCameraViewListener2 {
 	private static final double FEATURES_QUALITY = 0.01;
 	private static final double FEATURES_DISTANCE = 8;
 
-	private int waitFor = 10;
+	private int waitFor = 3;
 	Mat mRgbaSmall;
 
 	int DOWNSAMPLE_RATE = 1;
