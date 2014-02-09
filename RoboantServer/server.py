@@ -24,6 +24,7 @@ scrollX = 0
 
 mTurnSSD = {}
 mRouteSSD = {}
+mTurnSkewness = {}
 
 #def imagePosition(num):
     #global scrollX
@@ -149,6 +150,7 @@ MESSAGE_TURN_TO = r'turn_to\s(-?\d+)'
 MESSAGE_IMAGE = r'picture start\s(gotowards\s)?(-?\d+)' 
 MESSAGE_ROUTE_MATCH = r'route_match\s(\d+)'
 MESSAGE_SSD = r'ssd\s(-?\w+)\s(\w+)\s(\S+)'
+MESSAGE_SKEWNESS = r'skewness\s(-?\w+)\s(\w+)\s(\S+)'
 
 toHighlightTurn = None 
 toHighlightRoute = None 
@@ -215,6 +217,18 @@ class AntRobotControl(LineReceiver):
             mTurnSSD[deg] = (ssd, routeNum)
             mRouteSSD[routeNum] = (ssd, deg)
 
+        m = re.search(MESSAGE_SKEWNESS, line)
+        if m:
+            deg = int(m.group(1))
+            routeNum = int(m.group(2))
+            skewness = int(float(m.group(3)))
+            print "Skewness", str(deg), str(routeNum), str(skewness)
+            if mTurnSkewness.has_key(deg):
+                mTurnSkewness.clear()
+            mTurnSkewness[deg] = (skewness, routeNum)
+
+
+
 
     def rawDataReceived(self, data):
         global picturesChanged
@@ -267,7 +281,7 @@ mFont = pygame.font.Font(None, 36)
 textColor = (0, 160, 0)
 
 def draw_graph():
-    global mTurnSSD
+    global mTurnSSD, mTurnSkewness
 
     
     screen.fill(pygame.Color(0, 0, 0))
@@ -275,9 +289,18 @@ def draw_graph():
     points = []
     for key in sorted(mTurnSSD.keys()):
         #points += [(key * 5 + screenWidth/2, mTurnSSD[key][0]/100000)]
+        #points += [(key * 5, mTurnSSD[key][0]/100000)]
         points += [(key * 5, mTurnSSD[key][0]/100000)]
         #pygame.draw.circle(screen, (255, 255, 255), (key*5 + screenWidth/2,
                                                      #mTurnSSD[key][0]/100000), 20, 0)
+    if len(points) > 1:
+        pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
+
+    points = []
+
+    for key in sorted(mTurnSkewness.keys()):
+        points += [(key * 5, mTurnSkewness[key][0]/100 + 500)]
+
     if len(points) > 1:
         pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
 

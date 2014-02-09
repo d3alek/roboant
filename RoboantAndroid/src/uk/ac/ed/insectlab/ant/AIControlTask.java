@@ -1,11 +1,14 @@
 package uk.ac.ed.insectlab.ant;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 
 import android.graphics.Bitmap;
 import android.graphics.Color;
@@ -177,13 +180,15 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				//						e.printStackTrace();
 				//					}
 				//				}
-
+				int at = 0;
 				while (mBestImageNum + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
 					Log.i(TAG, "Following Route loop " + counter++);
 					//					ArrayList<TurnStep> turnsteps = lookAround();
-					ArrayList<TurnStep> turnsteps = lookAroundFast();
-					moveTowardsMin(turnsteps, mRoutePictures);
-					//					moveTowardsMinFast(turnsteps, mRoutePictures);
+					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
+					//					moveTowardsMin(turnsteps, mRoutePictures);
+					//					moveTowardsMin(turnsteps, moveTowards);(mRoutePictures.subList(at, 10));
+					doTurnUntilSlope(mRoutePictures.subList(at, 2), 0);
+					moveForward(100, 200);
 					Log.i(TAG, "Within " + (mRoutePictures.size() - mBestImageNum) + " of end");
 				}
 				Log.i(TAG, "Follow route finished");
@@ -200,15 +205,32 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				//				mNetworkControl.sendPicture(new RoboPicture(mCompareToBmp, PictureType.GoTowards, 0));
 
 				//				ArrayList<TurnStep> turnsteps = lookAround();
-				ArrayList<TurnStep> turnsteps = lookAroundFast();
+				//				ArrayList<TurnStep> turnsteps = lookAroundFast();
 
 				List<Bitmap> bitmap = new ArrayList<Bitmap>();
 				bitmap.add(mCompareToBmp);
 
-				moveTowardsMin(turnsteps, bitmap);
+				//				moveTowardsMin(turnsteps, bitmap);
+				//				moveTowardsMinRealtime(bitmap);
+				//				doTurnUntilSlope(bitmap, 0);
+				//				doTurnSA(Util.rotateBitmap(mCompareToBmp, 45));
 
+				waitLock();
+
+				//				doTurnSA(mCompareToBmp);
+				doTurnUntilSlope(bitmap, 0);
 			}
 		}
+	}
+
+	private void moveForward(int speed, int time) {
+		mRoboAntControl.setSpeeds(speed, speed);
+		try {
+			Thread.sleep(time);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		mRoboAntControl.setSpeeds(0, 0);
 	}
 
 	@Override
@@ -372,79 +394,376 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		waitLock();
 
 	}
-	
-	private void moveTowardsMinRealtime(List<Bitmap> moveTowards) {
-		
-		// forward 
-		Bitmap bForward = takePicture();
-		
-		// right 
-		mRoboAntControl.simpleTurnInPlaceBlocking(80, 100);
-		Bitmap bRight = takePicture();
-		
-		// left 
-		mRoboAntControl.simpleTurnInPlaceBlocking(80, 200);
-		Bitmap bLeft = takePicture();
-		
-		double minLeft, minRight, minForward;
-		int minPicLeft, minPicRight, minPicForward;
-		int routePicNum = 0;
-		minLeft = minRight = minForward = 1000000000;
-		minPicLeft = minPicRight = minPicForward = -1;
-		
-		for (Bitmap routeBmp : moveTowards) {
-			
-			double ssdLeft = imagesSSD(routeBmp, bLeft);
-			double ssdRight = imagesSSD(routeBmp, bRight);
-			double ssdForward = imagesSSD(routeBmp, bForward);
-			
-			if (minLeft > ssdLeft) {
-				minLeft = ssdLeft;
-				minPicLeft = routePicNum;
-			}
-			
-			if (minRight > ssdRight) {
-				minRight = ssdRight;
-				minPicRight = routePicNum;
-			}
-			
-			if (minForward > ssdForward) {
-				minForward = ssdForward;
-				minPicForward = routePicNum;
-			}
-			
-			routePicNum ++;
-		}
-		
-		Log.i(TAG, "mins (L, R, F)" + minLeft + " " + minRight + " " + minForward);
-		Log.i(TAG, "routeNums (L, R, F)" + minPicLeft + " " + minPicRight + " " + minPicForward);
-		
-		if (minLeft < minRight) {
-			if (minLeft < minForward) {
-				doTurnUntilPic(bLeft, -1);
-			}
-			else {
-//				doTurnUntilPic(bForward, 0);
-				// skip turning
-			}
-		}
-		else {
-			if (minRight < minForward) {
-				doTurnUntilPic(bRight, 1);
-			}
-			else {
-				// skip turning
-			}
-		}
-		
-		mRoboAntControl.setSpeeds(100, 100);
 
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
+	//	private void moveTowardsMinRealtime(List<Bitmap> moveTowards) {
+	//
+	//		// forward 
+	//		Bitmap bForward = takePicture();
+	//
+	//		// right 
+	//		mRoboAntControl.simpleTurnInPlaceBlocking(80, 200);
+	//		Bitmap bRight = takePicture();
+	//
+	//		// left 
+	//		mRoboAntControl.simpleTurnInPlaceBlocking(-80, 400);
+	//		Bitmap bLeft = takePicture();
+	//
+	//		double minLeft, minRight, minForward;
+	//		int minPicLeft, minPicRight, minPicForward;
+	//		int routePicNum = 0;
+	//		minLeft = minRight = minForward = 1000000000;
+	//		minPicLeft = minPicRight = minPicForward = -1;
+	//
+	//		for (Bitmap routeBmp : moveTowards) {
+	//
+	//			double ssdLeft = imagesSSD(routeBmp, bLeft);
+	//			double ssdRight = imagesSSD(routeBmp, bRight);
+	//			double ssdForward = imagesSSD(routeBmp, bForward);
+	//
+	//			if (minLeft > ssdLeft) {
+	//				minLeft = ssdLeft;
+	//				minPicLeft = routePicNum;
+	//			}
+	//
+	//			if (minRight > ssdRight) {
+	//				minRight = ssdRight;
+	//				minPicRight = routePicNum;
+	//			}
+	//
+	//			if (minForward > ssdForward) {
+	//				minForward = ssdForward;
+	//				minPicForward = routePicNum;
+	//			}
+	//
+	//			routePicNum ++;
+	//		}
+	//
+	//		Log.i(TAG, "mins (L, R, F)" + minLeft + " " + minRight + " " + minForward);
+	//		Log.i(TAG, "routeNums (L, R, F)" + minPicLeft + " " + minPicRight + " " + minPicForward);
+	//
+	//		if (minLeft < minRight) {
+	//			if (minLeft < minForward) {
+	//				Log.i(TAG, "Turning left");
+	//				doTurnUntilPic(bLeft, -1);
+	//			}
+	//			else {
+	//				Log.i(TAG, "Going straight");
+	//				doTurnUntilPic(bForward, 0);
+	//			}
+	//		}
+	//		else {
+	//			if (minRight < minForward) {
+	//				Log.i(TAG, "Turning right");
+	//				doTurnUntilPic(bRight, 1);
+	//			}
+	//			else {
+	//				Log.i(TAG, "Going straight");
+	//				doTurnUntilPic(bForward, 0);
+	//			}
+	//		}
+	//
+	//		mRoboAntControl.setSpeeds(100, 100);
+	//
+	//		try {
+	//			Thread.sleep(500);
+	//		} catch (InterruptedException e) {
+	//			e.printStackTrace();
+	//		}
+	//		mRoboAntControl.setSpeeds(0, 0);
+	//	}
+
+	private void doTurnSA(Bitmap routePic) {
+		//		int startSpeed = 120;
+		int kmax = 100;
+		//		int startT = 300;
+		double degToSpeed = 200/90.;
+		int startT = 0;
+
+		Bitmap curPic = takePicture();
+
+		//		int s = 0; 
+		double e = imagesSSD(routePic, curPic);
+
+		//		int sbest = star;
+		double ebest = e;
+
+		int snew;
+		double enew = e;
+
+		int k = 0;
+
+		double T;
+
+		int totalTurned = 0;
+
+		int etarget = 2000000;
+
+		Log.i(TAG, "start e is " + enew);
+
+		int speed;
+
+		int turnMax = 200;
+
+		while (k < kmax && enew > etarget) {
+			T = 120 * (1 - ((double)k)/kmax);
+
+			snew = (int)(T - Math.random()*2*T);
+			// -80  -- + 80
+
+			if (snew + totalTurned > turnMax) {
+				snew = turnMax - totalTurned;
+				totalTurned = turnMax - snew;
+			}
+
+			else if (snew + totalTurned < -turnMax) {
+				snew = -turnMax - totalTurned;
+				totalTurned = -turnMax - snew;
+			}
+
+			speed = (int)(degToSpeed * snew);
+			if (Math.abs(speed) < 80) {
+				if (speed < 0) {
+					speed = -80;
+				}
+				else {
+					speed = 80;
+				}
+			}
+
+			mRoboAntControl.simpleTurnInPlaceBlocking(speed, 100);
+			try {
+				Thread.sleep(300);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+			totalTurned += snew;
+
+			curPic = takePicture();
+			enew = imagesSSD(routePic, curPic);
+
+			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(k, 0, enew));
+
+			Log.i(TAG, "Turned " + totalTurned + " energy is " + enew);
+
+			if (enew < e) {
+				e = enew;
+			}
+			else {
+				Log.i(TAG, "exp " + Math.exp(-(enew - e)/(T*8000)) + " " + -(enew - e)/(T*8000));
+				if (Math.random() < Math.exp(-(enew - e)/(T*8000))) {
+					e = enew;
+				}
+				else {
+					// go back to previous state
+					mRoboAntControl.simpleTurnInPlaceBlocking(-speed, 100);
+					totalTurned -= snew;
+				}
+			}
+
+			++k;
+		}
+	}
+
+	private void doTurnUntilSlope(List<Bitmap> orientPics, int initialDir) {
+		Bitmap picture = takePicture();
+
+		int n = orientPics.size(), i;
+
+		//		orientPics.set(0, Util.rotateBitmap(orientPics.get(0), 30));
+
+		double[] curDif = new double[n];
+
+		//		for (i = 0; i < n; ++i) {
+		//			curDif[i] = imagesSSD(picture, orientPics.get(i));
+		//		}
+
+		curDif[0] = imagesSSD(picture, orientPics.get(0));
+
+//		int dir = initialDir >= 0 ? 1 : -1;
+
+		int dir = Math.random() >= 0.5 ? 1 : -1;
+
+		picture.recycle();
+
+		int turnSpeed = 80, turnTime = 100;
+		int deg = 0;
+
+		double[] thisMean = new double[n];
+		double[] prevMean = new double[n];
+		double[] minMean = new double[n];
+
+		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif[0]));
+
+		int smooth_by = 50;
+		DescriptiveStatistics[] stats = new DescriptiveStatistics[n];
+		//		for (i = 0; i < n; ++i) {
+		//			stats[i] = new DescriptiveStatistics();
+		//			stats[i].setWindowSize(smooth_by);
+		//			stats[i].addValue(curDif[i]);
+		//			thisMean[i] = curDif[i];
+		//			prevMean[i] = thisMean[i];
+		//			minMean[i] = thisMean[i];
+		//		}
+
+		stats[0] = new DescriptiveStatistics();
+		stats[0].setWindowSize(smooth_by);
+		stats[0].addValue(curDif[0]);
+		thisMean[0] = curDif[0];
+		prevMean[0] = thisMean[0];
+		minMean[0] = thisMean[0];
+
+		SimpleRegression regr = new SimpleRegression();
+
+		double thresh = 2000;
+		double minThresh = 200;
+		double stopThresh = 30000;
+
+		boolean peak1 = false;
+		int count = 0;
+
+		int messageCount = 0;
+		int sendMessageEvery = 10;
+
+		int changedDir = 0;
+		int maxChangedDir = 5;
+
+		int skewnessDir = 0;
+
+		double minSlope = 100;
+		double slope;
+
+		mRoboAntControl.setSpeeds(dir*turnSpeed, -dir*turnSpeed);
+
+		int changedDirLast = 0;
+		int minChangedDir = 20;
+		
+		double minSlopeDirChange = 20000;
+		int speed = Integer.MAX_VALUE;
+		int prevSpeed = 0;
+		
+		int regrNum = smooth_by;
+		
+		double prevSlope = 0;
+		
+		int lastDirChange = 0;
+
+        int dirChangeTimeout = 50;		
+        
+		while (true) {
+			if (mStop) {
+				break;
+			}
+			deg += dir;
+
+			picture = takePicture();
+			prevMean[0] = thisMean[0];
+			curDif[0] = imagesSSD(picture, orientPics.get(0));
+			if (curDif[0] == 0) {
+				continue;
+			}
+			stats[0].addValue(curDif[0]);
+			thisMean[0] = stats[0].getMean();
+
+
+//			if (timeSinceLastMean > timeBetweenMeansToBreak && Math.abs(minMean[0] - thisMean[0]) < stopThresh) {
+//				break;
+//			}
+
+			if (thisMean[0] < minMean[0]) {
+				minMean[0] = thisMean[0];
+//				timeSinceLastMean = 0;
+			}
+			count++;
+
+			
+//			int t = (int)stats[0].getN();
+//			//			if (t >= smooth_by) {
+//			regr.clear();
+//			for (i = ; i < t; ++i) {
+//				regr.addData(i, stats[0].getElement(i));
+//			}
+			//get last regrNum elements from stats
+			int statsN = (int)stats[0].getN();
+			int t = statsN > regrNum? regrNum : statsN;
+			regr.clear();
+			for (i = 0; i < t; ++i) {
+				regr.addData(i, stats[0].getElement(statsN - t + i));
+			}
+
+			slope = regr.getSlope();
+			//			else {
+			//				slope = 0;
+			//			}
+
+			if (slope > minSlopeDirChange && lastDirChange > dirChangeTimeout) {
+				Log.i(TAG, "dir change slope is " + slope);
+				lastDirChange = 0;
+				dir = -dir;
+				dirChangeTimeout *= 2;
+//                mRoboAntControl.setSpeeds(dir*turnSpeed, -dir*turnSpeed);
+				prevSpeed = 0;
+			}
+			else {
+				lastDirChange++;
+				if (lastDirChange > 2*dirChangeTimeout) {
+					dirChangeTimeout /= 2;
+				}
+			}
+			
+			if (count % sendMessageEvery == 0) {
+				mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount, 0, thisMean[0]));
+//				mNetworkControl.sendMessage(Util.newLookAroundSkewnessMessage(messageCount++, 0, slope > 0 ? 1000 : -1000));
+				mNetworkControl.sendMessage(Util.newLookAroundSkewnessMessage(messageCount++, 0, dir*1000));
+			}
+			
+			Log.i(TAG, "Slope " + slope);
+//			if (slope > 0 && Math.abs(slope) > minSlopeDirChange) {
+//				dir = -dir;
+////				int speed = (int)(dir*(turnSpeed - 30 * (slope/12000.)));
+////				mRoboAntControl.setSpeeds(dir*speed, -dir*speed);
+//				changedDirLast = 0;
+//			}
+//			else {
+//				changedDirLast++;
+//			}
+			
+//			if (slope < 0 && prevSlope)
+			if (slope > 0 && prevSlope < 0) {
+				// we are in a minimum
+				Log.i(TAG, "Break");
+				if (speed < 70) {
+					break;
+				}
+//				break;
+			}
+//			
+//			if (slope <)
+			
+//			if (stats[0].getN() == smooth_by && Math.abs(thisMean[0]) < stopThresh && slope < 0) {
+//				break;
+//			}
+			if (slope < 0) {
+                speed = (int)((turnSpeed - 15 * (1 - thisMean[0]/10000000.)));
+//                Log.i(TAG, "Speed is " + speed + " " + curDif[0]);
+                if (speed < 70) {
+                	break;
+                }
+			}
+			else {
+				speed = turnSpeed;
+			}
+			if (prevSpeed != speed) {
+                mRoboAntControl.setSpeeds(dir*speed, -dir*speed);
+                prevSpeed = speed;
+			}
+			prevSlope = slope;
+			Log.i(TAG, "means " + thisMean[0] + " " + prevMean[0] + " " + minMean[0]);
+			picture.recycle();
 		}
 		mRoboAntControl.setSpeeds(0, 0);
+
 	}
 
 	private void moveTowardsMin(ArrayList<TurnStep> turnsteps, List<Bitmap> moveTowards) {
@@ -469,7 +788,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			bestPicTowards = null;
 			for (Bitmap routePic: moveTowards) {
 				dist = imagesSSD(routePic, bmp);
-//				Log.i(TAG, "Dist is " + dist);
+				//				Log.i(TAG, "Dist is " + dist);
 				if (dist < minRoutePicDist) {
 					minRoutePicDist = dist;
 					currentMinRouteStep = picNum;  
@@ -512,7 +831,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 
 		Log.i(TAG, "Turning to " + turnTo);
-//		doTurnUntilPic(Util.rotateBitmap(minTurnPic, -45), -45);
+		//		doTurnUntilPic(Util.rotateBitmap(minTurnPic, -45), -45);
 		doTurnUntilPic(minTurnPic, turnTo);
 
 		//		if (AWAIT_CONFIRM) {
@@ -533,85 +852,84 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 		mRoboAntControl.setSpeeds(0, 0);
 	}
-//
-//	private void showTurningSlope() {
-//		//		Bitmap bmp = Util.rotateBitmap(takePicture(), 40);
-//		Bitmap bmp = takePicture();
-//		Bitmap compareTo = Util.rotateBitmap(mCompareToBmp, 40);
-//
-//		double prevDif = 0;
-//		double curDif = imagesSSD(bmp, compareTo);
-//
-//		int dir = 1;
-//
-//		bmp.recycle();
-//
-//		int turnSpeed = 100, turnTime = 100;
-//		int thresh = 3000000;
-//		int deg = 0;
-//		double bestDif = curDif;
-//		int bestAt = deg;
-//
-//		//		doTurn(dir * TURN_STEP);
-//		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
-//		Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif);
-//		while (deg < 50) {
-//			deg += dir;
-//
-//			//			try {
-//			//				Thread.sleep(200);
-//			//			}
-//			//			catch (InterruptedException e) {
-//			//				e.printStackTrace();
-//			//			}
-//			//			doTurn(turnStep);
-//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
-//			bmp = takePicture();
-//			prevDif = curDif;
-//			curDif = imagesSSD(bmp, compareTo);
-//			if (curDif < bestDif) {
-//				bestDif = curDif;
-//				bestAt = deg;
-//			}
-//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
-//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
-//			bmp.recycle();
-//		}
-//
-//		int smooth_by = 5;
-//		DescriptiveStatistics stats = new DescriptiveStatistics();
-//		stats.setWindowSize(smooth_by);
-//		stats.addValue(curDif);
-//
-//		dir = -1;
-//		while (deg > -100) {
-//			deg += dir;
-//
-//			//			try {
-//			//				Thread.sleep(200);
-//			//			}
-//			//			catch (InterruptedException e) {
-//			//				e.printStackTrace();
-//			//			}
-//			//			doTurn(turnStep);
-//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
-//			bmp = takePicture();
-//			prevDif = curDif;
-//			curDif = imagesSSD(bmp, mCompareToBmp);
-//			if (curDif < bestDif) {
-//				bestDif = curDif;
-//				bestAt = deg;
-//			}
-//			stats.addValue(curDif);
-//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, stats.getMean()));
-//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
-//			bmp.recycle();
-//		}
-//	}
+	//
+	//	private void showTurningSlope() {
+	//		//		Bitmap bmp = Util.rotateBitmap(takePicture(), 40);
+	//		Bitmap bmp = takePicture();
+	//		Bitmap compareTo = Util.rotateBitmap(mCompareToBmp, 40);
+	//
+	//		double prevDif = 0;
+	//		double curDif = imagesSSD(bmp, compareTo);
+	//
+	//		int dir = 1;
+	//
+	//		bmp.recycle();
+	//
+	//		int turnSpeed = 100, turnTime = 100;
+	//		int thresh = 3000000;
+	//		int deg = 0;
+	//		double bestDif = curDif;
+	//		int bestAt = deg;
+	//
+	//		//		doTurn(dir * TURN_STEP);
+	//		mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
+	//		Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif);
+	//		while (deg < 50) {
+	//			deg += dir;
+	//
+	//			//			try {
+	//			//				Thread.sleep(200);
+	//			//			}
+	//			//			catch (InterruptedException e) {
+	//			//				e.printStackTrace();
+	//			//			}
+	//			//			doTurn(turnStep);
+	//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+	//			bmp = takePicture();
+	//			prevDif = curDif;
+	//			curDif = imagesSSD(bmp, compareTo);
+	//			if (curDif < bestDif) {
+	//				bestDif = curDif;
+	//				bestAt = deg;
+	//			}
+	//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, curDif));
+	//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
+	//			bmp.recycle();
+	//		}
+	//
+	//		int smooth_by = 5;
+	//		DescriptiveStatistics stats = new DescriptiveStatistics();
+	//		stats.setWindowSize(smooth_by);
+	//		stats.addValue(curDif);
+	//
+	//		dir = -1;
+	//		while (deg > -100) {
+	//			deg += dir;
+	//
+	//			//			try {
+	//			//				Thread.sleep(200);
+	//			//			}
+	//			//			catch (InterruptedException e) {
+	//			//				e.printStackTrace();
+	//			//			}
+	//			//			doTurn(turnStep);
+	//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+	//			bmp = takePicture();
+	//			prevDif = curDif;
+	//			curDif = imagesSSD(bmp, mCompareToBmp);
+	//			if (curDif < bestDif) {
+	//				bestDif = curDif;
+	//				bestAt = deg;
+	//			}
+	//			stats.addValue(curDif);
+	//			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, 0, stats.getMean()));
+	//			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
+	//			bmp.recycle();
+	//		}
+	//	}
 
 	private void doTurnUntilPic(Bitmap turnTo, int initialDir) {
 		Bitmap bmp = takePicture();
-		//		Bitmap compareTo = Util.rotateBitmap(mCompareToBmp, 40);
 
 		double prevDif = 0;
 		double curDif = imagesSSD(bmp, turnTo);
@@ -638,20 +956,20 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		thisMean = stats.getMean();
 		prevMean = thisMean;
 		double meanMax = thisMean;
-//		double thresh = 100000;
-		double thresh = 6000;
+		//		double thresh = 100000;
+		double thresh = 2000;
 		double minThresh = 200;
 		//		double thresh = 10000000;
 		double stopThresh = 400000;
 
 		boolean peak1 = false;
 		int count = 0;
-		
+
 		int messageCount = 0;
 		int sendMessageEvery = 20;
-		
+
 		int changedDir = 0;
-		int maxChangedDir = 10;
+		int maxChangedDir = 5;
 		mRoboAntControl.setSpeeds(dir*turnSpeed, -dir*turnSpeed);
 		while (true) {
 			if (mStop) {
@@ -666,7 +984,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			//				e.printStackTrace();
 			//			}
 			//			doTurn(turnStep);
-//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
+			//			mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, turnTime);
 			bmp = takePicture();
 			prevDif = curDif;
 			prevMean = thisMean;
@@ -679,23 +997,23 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			thisMean = stats.getMean();
 			if (peak1 && Math.abs(meanMax - thisMean) < stopThresh) {
 				break;
-//				continue;
+				//				continue;
 			}
 			if (thisMean < meanMax) {
 				meanMax = thisMean;
 			}
 			count++;
 			if (count % sendMessageEvery == 0) {
-                mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount++, 0, thisMean));
+				mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount++, 0, thisMean));
 			}
 
 			Log.i(TAG, "Skewness " + stats.getSkewness());
 			if (stats.getN() == smooth_by && thisMean > prevMean && (thisMean - prevMean) > thresh) {
-//			thisSkewness = stats.getSkewness();
-//			prevSkewness = stats.getSkewness();
-//			stats.get
-//			if (stats.getN() > smooth_by && Math.abs(thisMean - prevMean) < minThresh) {
-//			if (stats.getN() > smooth_by && Math.abs(stats.getSkewness()) < 0.5) {
+				//			thisSkewness = stats.getSkewness();
+				//			prevSkewness = stats.getSkewness();
+				//			stats.get
+				//			if (stats.getN() > smooth_by && Math.abs(thisMean - prevMean) < minThresh) {
+				//			if (stats.getN() > smooth_by && Math.abs(stats.getSkewness()) < 0.5) {
 				//				if (peak1) {
 				//					mRoboAntControl.simpleTurnInPlaceBlocking(dir*turnSpeed, 2*turnTime);
 				//					bmp = takePicture();
@@ -721,7 +1039,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					e.printStackTrace();
 				}
 			}
-			
+
 
 			Log.i(TAG, "curDif " + curDif + " prevDif " + prevDif + " best dif " + bestDif + " " + bestAt);
 			bmp.recycle();
@@ -916,22 +1234,22 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 	private double imagesSSD(Bitmap b1, Bitmap b2) {
 
 		if (mPixelsToCheck == null) {
-			//			int pixel, r, g, bl, a;
+			int pixel, r, g, bl, a;
 			mPixelsToCheck = new HashSet<Point>();
-			//			for (int i = 0; i < b1.getWidth(); ++i) {
-			//				for (int j = 0; j < b1.getHeight(); ++j) {
-			//					pixel = b1.getPixel(i, j);
-			//					r = Color.red(pixel);
-			//					g = Color.green(pixel);
-			//					bl = Color.blue(pixel);
-			//					a = Color.alpha(pixel);
-			//					if (a == 0 || (r == 0 && g == 0 && bl == 0)) {
-			//					}
-			//					else {
-			//						mPixelsToCheck.add(new Point(i, j));
-			//					}
-			//				}
-			//			}
+			for (int i = 0; i < b1.getWidth(); ++i) {
+				for (int j = 0; j < b1.getHeight(); ++j) {
+					pixel = b1.getPixel(i, j);
+					r = Color.red(pixel);
+					g = Color.green(pixel);
+					bl = Color.blue(pixel);
+					a = Color.alpha(pixel);
+					if (a == 0 || (r == 0 && g == 0 && bl == 0)) {
+					}
+					else {
+						mPixelsToCheck.add(new Point(i, j));
+					}
+				}
+			}
 			for (int i = 0; i < b1.getWidth(); ++i) {
 				for (int j = 0; j < b1.getHeight(); ++j) {
 					//					int pixel = b1.getPixel(i, j);
@@ -948,17 +1266,18 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		for (Point p: mPixelsToCheck) {
 			pixel1 = b1.getPixel(p.x, p.y);
 			pixel2 = b2.getPixel(p.x, p.y);
-			r1 = Color.red(pixel1);
-			r2 = Color.red(pixel2);
+			//			r1 = Color.red(pixel1);
+			//			r2 = Color.red(pixel2);
 			g1 = Color.green(pixel1);
 			g2 = Color.green(pixel2);
-			bl1 = Color.blue(pixel1);
-			bl2 = Color.blue(pixel2);
+			//			bl1 = Color.blue(pixel1);
+			//			bl2 = Color.blue(pixel2);
 
 
-			ssd += (r1 - r2) * (r1 - r2) +
-					(g1 - g2) * (g1 - g2) +
-					(bl1 - bl2) * (bl1 - bl2);
+			//			ssd += (r1 - r2) * (r1 - r2) +
+			//					(g1 - g2) * (g1 - g2) +
+			//					(bl1 - bl2) * (bl1 - bl2);
+			ssd += (g1 - g2) * (g1 - g2);
 
 
 		}

@@ -253,6 +253,20 @@ camera.startPreview();
 		return targetBitmap;
 	}
 
+	public static double minInArrray(double[] array) {
+		double min = Double.MAX_VALUE;
+		for (int i = 0; i < array.length; ++i) {
+			if (array[i] < min) {
+				min = array[i];
+			}
+		}
+		return min;
+	}
+
+	public static String newLookAroundSkewnessMessage(int count, int routeStep, double skewness) {
+		return NetworkControl.SKEWNESS_MESSAGE + " " + count + " " + routeStep + " " + skewness;
+	}
+
 //	public static int compareAngles(int deg1, int deg2) {
 //		if (Math.abs(deg1 - deg2) >= 180) {
 //			if (deg1 < 0) {
