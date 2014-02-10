@@ -183,6 +183,9 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				//				}
 				int at = 0;
 				while (at + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
+					if (mStop) {
+						break;
+					}
 					Log.i(TAG, "Following Route loop " + counter++);
 					//					ArrayList<TurnStep> turnsteps = lookAround();
 					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
@@ -199,7 +202,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					int atIncr = doTurnUntilSlope(mRoutePictures.subList(from, to));
 					at = from + atIncr;
 					moveForward(100, 200);
-					Log.i(TAG, "At " + at + " Within " + (mRoutePictures.size() - at) + " of end");
+					Log.i(TAG, "At " + at + " " + from + " " + to + " " + atIncr + " Within " + (mRoutePictures.size() - at) + " of end");
 				}
 				Log.i(TAG, "Follow route finished");
 				publishProgress("Follow route finished");
@@ -260,7 +263,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(deg, i, curDif[i]));
 		}
 
-		int smooth_by = 50;
+		int smooth_by = 20;
 		DescriptiveStatistics[] stats = new DescriptiveStatistics[n];
 		for (i = 0; i < n; ++i) {
 			stats[i] = new DescriptiveStatistics();
@@ -274,7 +277,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		int count = 0;
 
 		int messageCount = 0;
-		int sendMessageEvery = 10;
+		int sendMessageEvery = 1;
 
 		double slope;
 
@@ -290,22 +293,32 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		int lastDirChange = 0;
 
-		int dirChangeTimeout = 50;		
+		int dirChangeTimeout = 5;		
 
 		Log.i(TAG, "Time: initialization " + (System.currentTimeMillis() - start));
 
 		double[] thisSlopes = new double[n];
+		double[] prevSlopes = new double[n];
 		
 		int usingSlopeAt = 0;
 
 		int beenhere = 0;
 		int maxTimesHere = 10;
 		
+		boolean toBreak;
+		boolean dirChanged; 
+		
+		boolean[] dipFound = new boolean[n];
+		int[] dipFoundFor = new int[n];
+		int dipFoundThresh = 2;
+		int meanThresh = 4000000;
 		while (true) {
 			start = System.currentTimeMillis();
 			if (mStop) {
 				break;
 			}
+			toBreak = false;
+			dirChanged = false;
 			deg += dir;
 			count++;
 
@@ -330,9 +343,80 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				}
 
 				thisSlopes[i] = regr.getSlope();
+				slope = thisSlopes[i];
+				prevSlope = prevSlopes[i];
+				Log.i(TAG, "Slope " + slope + " " + usingSlopeAt);
+
+				if (!dirChanged && Math.abs(slope) > minSlopeDirChange && lastDirChange > dirChangeTimeout) {
+					Log.i(TAG, "Change dir timeout " + dirChangeTimeout);
+					lastDirChange = 0;
+					dir = -dir;
+					dirChangeTimeout *= 2;
+					prevSpeed = 0;
+					dirChanged = true;
+				}
+//				else {
+//					lastDirChange++;
+//					if (lastDirChange > 2*dirChangeTimeout) {
+//						dirChangeTimeout /= 2;
+//					}
+//				}
+
+				if (count % sendMessageEvery == 0) {
+//					for (i = 0; i < n; ++i) {
+						mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount, i, thisMean[i]));
+//					}
+					mNetworkControl.sendMessage(Util.newLookAroundSkewnessMessage(messageCount, i, slope));
+				}
+
+				Log.i(TAG, "Slope " + slope);
+
+				if (slope > 0 && prevSlope < 0) {
+					// we are in a minimum
+					dipFound[i] = true;
+					dipFoundFor[i] = 0;
+					beenhere++;
+					Log.i(TAG, "Peak - Break? " + beenhere + " meanThresh " + thisMean[i]);
+					if (thisMean[i] < meanThresh) {
+						toBreak = true;
+						break;
+					}
+					else {
+						meanThresh += 1000000;
+					}
+//					if (speed <= 70 || beenhere > maxTimesHere) {
+//						Log.i(TAG, "Break");
+//						toBreak = true;
+//						break;
+//					}
+				}
+				
+//				else if (dipFound[i] && slope > 0) {
+//					dipFoundFor[i]++;
+//					Log.i(TAG, "dipFoundFor " + dipFoundFor[i] + " " + i);
+//					if (dipFoundFor[i] >= dipFoundThresh) {
+//						toBreak = true;
+//						break;
+//					}
+//				}
+				
+				if (slope < 0) {
+					dipFound[i] = false;
+				}
+
+				
+				prevSlopes[i] = slope;
 			}
 
-//			slope = Util.minInArrray(thisSlopes);
+			if (toBreak) {
+				usingSlopeAt = i;
+				break;
+			}
+			
+			if (!dirChanged) {
+				lastDirChange++;
+			}
+			
 			slope = Double.MAX_VALUE;
 			
 			for (i = 0; i < n; ++i) {
@@ -342,67 +426,26 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				}
 			}
 			
-			//			if (curDif[0] == 0) {
-			//				Log.i(TAG, "Time: empty loop " + (System.currentTimeMillis() - start));
-			//				continue;
-			//			}
-
-
-			Log.i(TAG, "Slope " + slope + " " + usingSlopeAt);
-
-			if (slope > minSlopeDirChange && lastDirChange > dirChangeTimeout) {
-				Log.i(TAG, "Change dir timeout " + dirChangeTimeout);
-				lastDirChange = 0;
-				dir = -dir;
-				dirChangeTimeout *= 2;
-				prevSpeed = 0;
-			}
-			else {
-				lastDirChange++;
-				if (lastDirChange > 2*dirChangeTimeout) {
-					dirChangeTimeout /= 2;
-				}
-			}
-
-			if (count % sendMessageEvery == 0) {
-//				for (i = 0; i < n; ++i) {
-					mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount, 0, thisMean[usingSlopeAt]));
-//				}
-				mNetworkControl.sendMessage(Util.newLookAroundSkewnessMessage(messageCount++, 0, dir*1000));
-			}
-
-			Log.i(TAG, "Slope " + slope);
-
-			if (slope > 0 && prevSlope < 0) {
-				// we are in a minimum
-				beenhere++;
-				Log.i(TAG, "Peak - Break? " + beenhere);
-				if (speed <= 70 || beenhere > maxTimesHere) {
-					Log.i(TAG, "Break");
-					break;
-				}
-			}
-
 			if (slope < 0) {
 				speed = (int)((turnSpeed - 15 * (1 - thisMean[usingSlopeAt]/10000000.)));
 				Log.i(TAG, "Speed is " + speed);
-				
-				if (speed <= 70 ) {
-					break;
-				}
-				
 			}
 			else {
 				speed = turnSpeed;
 			}
-			if (prevSpeed != speed) {
+//			if (prevSpeed != speed) {
 				mRoboAntControl.setSpeeds(dir*speed, -dir*speed);
-				prevSpeed = speed;
+//				prevSpeed = speed;
+//			}
+
+			if (count % sendMessageEvery == 0) {
+				messageCount ++;
 			}
-			prevSlope = slope;
+			
+			
 			//			Log.i(TAG, "means " + thisMean[0] + " " + prevMean[0] + " " + minMean[0]);
 			picture.recycle();
-//			Log.i(TAG, "Time: full loop " + (System.currentTimeMillis() - start));
+			Log.i(TAG, "Time: full loop " + (System.currentTimeMillis() - start));
 		}
 		mRoboAntControl.setSpeeds(0, 0);
 

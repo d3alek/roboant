@@ -212,9 +212,11 @@ class AntRobotControl(LineReceiver):
             routeNum = int(m.group(2))
             ssd = int(float(m.group(3)))
             print "SSD", str(deg), str(routeNum), str(ssd)
-            if mTurnSSD.has_key(deg):
+            if mTurnSSD.has_key((deg, routeNum)):
+                print "Clearing ssd"
                 mTurnSSD.clear()
-            mTurnSSD[deg] = (ssd, routeNum)
+                mTurnSkewness.clear()
+            mTurnSSD[(deg, routeNum)] = ssd
             mRouteSSD[routeNum] = (ssd, deg)
 
         m = re.search(MESSAGE_SKEWNESS, line)
@@ -223,8 +225,8 @@ class AntRobotControl(LineReceiver):
             routeNum = int(m.group(2))
             skewness = int(float(m.group(3)))
             print "Skewness", str(deg), str(routeNum), str(skewness)
-            if mTurnSkewness.has_key(deg):
-                mTurnSkewness.clear()
+#            if mTurnSkewness.has_key(deg) and mTurnSkewness[deg][1] == routeNum:
+#                mTurnSkewness.clear()
             mTurnSkewness[deg] = (skewness, routeNum)
 
 
@@ -286,23 +288,36 @@ def draw_graph():
     
     screen.fill(pygame.Color(0, 0, 0))
 
-    points = []
+    points = {} 
+
     for key in sorted(mTurnSSD.keys()):
         #points += [(key * 5 + screenWidth/2, mTurnSSD[key][0]/100000)]
         #points += [(key * 5, mTurnSSD[key][0]/100000)]
-        points += [(key * 5, mTurnSSD[key][0]/100000)]
+        turn = key[0]
+        ssdNum = key[1]
+        #ssdNum = mTurnSSD[key][1]
+        if not points.has_key(ssdNum):
+            points[ssdNum] = []
+
+        points[ssdNum] += [(turn, (200-mTurnSSD[key]/100000) + 10*ssdNum)]
         #pygame.draw.circle(screen, (255, 255, 255), (key*5 + screenWidth/2,
                                                      #mTurnSSD[key][0]/100000), 20, 0)
-    if len(points) > 1:
-        pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
+    for key in sorted(points.keys()):
+        if len(points[key]) > 1:
+            pygame.draw.lines(screen, (255, 255, 255), False, points[key], 2)
 
-    points = []
+    points = {}
 
     for key in sorted(mTurnSkewness.keys()):
-        points += [(key * 5, mTurnSkewness[key][0]/100 + 500)]
+        slopeNum = mTurnSkewness[key][1]
+        if not points.has_key(slopeNum):
+            points[slopeNum] = []
 
-    if len(points) > 1:
-        pygame.draw.lines(screen, (255, 255, 255), False, points, 2)
+        points[slopeNum] += [(key * 5, mTurnSkewness[key][0]/100 + 500 + slopeNum)]
+
+    #for key in sorted(points.keys()):
+        #if len(points[key]) > 1:
+            #pygame.draw.lines(screen, (255, 255, 255), False, points[key], 2)
 
     pygame.display.update()
 
