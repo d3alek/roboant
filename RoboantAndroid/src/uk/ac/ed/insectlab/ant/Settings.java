@@ -12,6 +12,9 @@ public class Settings {
 	private static final String KEY_LENS_X = "lens_x";
 	private static final String KEY_LENS_Y = "lens_y";
 	private static final String KEY_LENS_RAD = "lens_rad";
+	private static final String KEY_SSD_MIN = "ssd_min";
+	private static final String KEY_SSD_MAX = "ssd_max";
+	private static final String KEY_SSD_CALIBRATED = "ssd_calibrated";
 	private SharedPreferences mPrefs;
 
 	public Settings(Context context) {
@@ -38,6 +41,28 @@ public class Settings {
 		e.putFloat(KEY_LENS_X, (float)lens.x);
 		e.putFloat(KEY_LENS_Y, (float)lens.y);
 		e.putFloat(KEY_LENS_RAD, (float)lens.z);
+		e.apply();
+	}
+
+	public double getSSDMin() {
+		return mPrefs.getFloat(KEY_SSD_MIN, 0);
+	}
+	
+	public double getSSDMax() {
+		return mPrefs.getFloat(KEY_SSD_MAX, 0);
+	}
+	
+	public boolean getSSDCalibrated() {
+		return mPrefs.getBoolean(KEY_SSD_CALIBRATED, false);
+	}
+	
+	public void setSSDCalibrationResults(boolean calibrated, double min, double max) {
+		Editor e  = mPrefs.edit();
+		e.putBoolean(KEY_SSD_CALIBRATED, calibrated);
+		if (calibrated) {
+			e.putFloat(KEY_SSD_MIN, (float)min);
+			e.putFloat(KEY_SSD_MAX, (float)max);
+		}
 		e.apply();
 	}
 }

@@ -420,6 +420,7 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 	private ImageView mStepTowardsPic;
 
 
+
 	public class ConnectTask extends AsyncTask<Void, String, TcpClient> {
 
 		@Override
@@ -556,15 +557,24 @@ public class AntControlActivity extends Activity implements RouteSelectedListene
 		}
 		else if (message.startsWith("calibrate")) {
 			Log.i(TAG, "Calibrate message");
-			if (mRoboAntControl != null) {
-				mRoboAntControl.calibrate();
-			}
+//			if (mRoboAntControl != null) {
+//				mRoboAntControl.calibrate();
+//			}
+			
+			calibrateSSD();
 		}
 		else if (message.startsWith("go")) {
 			if (mAIControl != null) {
 				mAIControl.releaseLock();
 			}
 		}
+	}
+
+	private void calibrateSSD() {
+		if (mAIControl != null) {
+			mAIControl.calibrateSSD();
+		}
+		
 	}
 
 	private void toggleAI() {

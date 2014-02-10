@@ -16,6 +16,7 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
+import android.provider.Settings.Global;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -88,6 +89,12 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 	private NetworkControl mNetworkControl;
 
+	private boolean mSSDCalibrated;
+
+	private double mSSDMin;
+
+	private double mSSDMax;
+
 
 	public AIControlTask(OpenCVCamera camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
 		this(camControl, networkControl, messageView, currentStepPic, goTowardsPic, currentStepNum, goTowardsNum, progressBar, new LinkedList<Bitmap>());
@@ -104,6 +111,12 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mMessageView = messageView;
 		mRoutePictures = routePictures;
 		mNetworkControl = networkControl;
+        mSSDCalibrated = GLOBAL.getSettings().getSSDCalibrated();
+		if (mSSDCalibrated) {
+                mSSDMin = GLOBAL.getSettings().getSSDMin();
+                mSSDMax = GLOBAL.getSettings().getSSDMax();
+		}
+
 		if (!mRoutePictures.isEmpty()) {
 			mFollowingRoute = true;
 		}
@@ -169,44 +182,37 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		while (true) {
 			if (mFollowingRoute) {
-				int counter = 0;
-
-				//				for (int i = 0; i < mRoutePictures.size(); ++i) {
-				//					Bitmap bmp = mRoutePictures.get(i);
-				//					//					mNetworkControl.sendPicture(new RoboPicture(bmp, PictureType.GoTowards, i));
-				//					try {
-				//						Thread.sleep(1000);
-				//					} catch (InterruptedException e) {
-				//						// TODO Auto-generated catch block
-				//						e.printStackTrace();
-				//					}
-				//				}
-				int at = 0;
-				while (at + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
-					if (mStop) {
-						break;
-					}
-					Log.i(TAG, "Following Route loop " + counter++);
-					//					ArrayList<TurnStep> turnsteps = lookAround();
-					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
-					//					moveTowardsMin(turnsteps, mRoutePictures);
-					//					moveTowardsMin(turnsteps, moveTowards);(mRoutePictures.subList(at, 10));
-					int from = at-PICTURES_WINDOW/2;
-					int to = at+PICTURES_WINDOW/2;
-					if (from < 0) {
-						from = 0;
-					}
-					if (to > mRoutePictures.size()) {
-						to = mRoutePictures.size()-1;
-					}
-					int atIncr = doTurnUntilSlope(mRoutePictures.subList(from, to));
-					at = from + atIncr;
-					moveForward(100, 200);
-					Log.i(TAG, "At " + at + " " + from + " " + to + " " + atIncr + " Within " + (mRoutePictures.size() - at) + " of end");
+				if (mStop) {
+					return null;
 				}
-				Log.i(TAG, "Follow route finished");
-				publishProgress("Follow route finished");
-				mFollowingRoute = false;
+				swayingHoming(mRoutePictures);
+//				int counter = 0;
+//				int at = 0;
+//				while (at + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
+//					if (mStop) {
+//						break;
+//					}
+//					Log.i(TAG, "Following Route loop " + counter++);
+//					//					ArrayList<TurnStep> turnsteps = lookAround();
+//					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
+//					//					moveTowardsMin(turnsteps, mRoutePictures);
+//					//					moveTowardsMin(turnsteps, moveTowards);(mRoutePictures.subList(at, 10));
+//					int from = at-PICTURES_WINDOW/2;
+//					int to = at+PICTURES_WINDOW/2;
+//					if (from < 0) {
+//						from = 0;
+//					}
+//					if (to > mRoutePictures.size()) {
+//						to = mRoutePictures.size()-1;
+//					}
+//					int atIncr = doTurnUntilSlope(mRoutePictures.subList(from, to));
+//					at = from + atIncr;
+//					moveForward(100, 200);
+//					Log.i(TAG, "At " + at + " " + from + " " + to + " " + atIncr + " Within " + (mRoutePictures.size() - at) + " of end");
+//				}
+//				Log.i(TAG, "Follow route finished");
+//				publishProgress("Follow route finished");
+//				mFollowingRoute = false;
 			}
 			else {
 				Log.i(TAG, "Wait lock");
@@ -233,6 +239,50 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				//				doTurnSA(mCompareToBmp);
 				doTurnUntilSlope(bitmap);
 			}
+		}
+	}
+	
+	private void swayingHoming(List<Bitmap> routePics) {
+		int dir = 1; //right
+		double minDist;
+		double thisDist;
+		int rotateSpeed;
+		
+		int speedAdj = 200;
+		
+		Bitmap thisPicture;
+		
+//		if (lookahead <= 0 && lookahead > routePics.size()) {
+//			lookahead = routePics.size();
+//		}
+//		
+		while (true) {
+			if (mStop) {
+				break;
+			}
+			
+			thisPicture = takePicture();
+			
+			minDist = Double.MAX_VALUE;
+			
+			for (int i = 0; i < routePics.size(); ++i) {
+                thisDist = imagesSSD(routePics.get(i), thisPicture);
+                if (thisDist < minDist) {
+                	minDist = thisDist;
+                	Log.i(TAG, "loop min is " + minDist + " at " + i);
+                }
+			}
+           	Log.i(TAG, "final min is " + minDist);
+			
+			rotateSpeed = (int)(speedAdj * minDist);
+
+           	Log.i(TAG, "rotateSpeed is " + rotateSpeed);
+			
+			mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
+			
+			dir = -dir;
+
+			moveForward(80, 200);
 		}
 	}
 	
@@ -1316,7 +1366,30 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		//        Log.i(TAG, "imagesSSD runtime " + (System.currentTimeMillis() - start));
 
-		return ssd;
+		return normalizeSSD(ssd);
+	}
+
+	private double normalizeSSD(double ssd) {
+		if (!mSSDCalibrated) {
+			Log.w(TAG, "Not calibrated, returning normal ssd");
+			return ssd;
+		}
+		double calibrated = (ssd - mSSDMin)/(mSSDMax - mSSDMin);
+		if (calibrated < 0 || calibrated > 1) {
+//			throw(new RuntimeException("Calibrated is " + calibrated));
+			Log.w(TAG, "Calibrated is < 0 or > 1 " + calibrated + ssd);
+			if (calibrated < 0) {
+				mSSDMin = ssd;
+			}
+			else {
+				mSSDMax = ssd;
+			}
+			
+			GLOBAL.getSettings().setSSDCalibrationResults(true, mSSDMin, mSSDMax);
+			
+			return normalizeSSD(ssd);
+		}
+		return calibrated;
 	}
 
 	public Handler getHandler() {
@@ -1403,6 +1476,63 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		synchronized (lock) {
 			lock.notify();
 		}
+	}
+
+	private double mCalibrateSSDMin;
+
+	private double mCalibrateSSDMAX;
+
+	private Bitmap mCalibrateBmp;
+	
+	private long mLastTimeChanged;
+
+	public void calibrateSSD() {
+		mRoboAntControl.setSpeeds(-100, 100);
+		mCalibrateSSDMin = Double.MAX_VALUE;
+		mCalibrateSSDMAX = Double.MIN_VALUE;
+		mCalibrateBmp = mCameraControl.getPicture();
+		
+		mSSDCalibrated = false;
+		
+		mLastTimeChanged = System.currentTimeMillis();
+
+		mHandler.postDelayed(new Runnable() {
+			
+
+			@Override
+			public void run() {
+				Bitmap bmp = mCameraControl.getPicture();
+				boolean changed = false;
+				
+				double ssd = imagesSSD(bmp, mCalibrateBmp);
+				if (ssd < mCalibrateSSDMin) {
+					mCalibrateSSDMin = ssd;
+					changed = true;
+				}
+				if (ssd > mCalibrateSSDMAX) {
+					mCalibrateSSDMAX = ssd;
+					changed = true;
+				}
+				
+				if (changed) {
+					mLastTimeChanged = System.currentTimeMillis();
+				}
+				else {
+					if (System.currentTimeMillis() - mLastTimeChanged > 2000) {
+						// do not post this callback again
+						GLOBAL.getSettings().setSSDCalibrationResults(true, mCalibrateSSDMin, mCalibrateSSDMAX);
+						mSSDCalibrated = true;
+						mSSDMin = mCalibrateSSDMin;
+						mSSDMax = mCalibrateSSDMAX;
+						mRoboAntControl.setSpeeds(0, 0);
+						return;
+					}
+				}
+				mHandler.post(this);
+				
+			}
+		}, 100);
+		
 	}
 
 }
