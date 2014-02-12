@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
@@ -95,6 +96,8 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 	private double mSSDMax;
 
+	private Semaphore mMinCalcMutex;
+
 
 	public AIControlTask(OpenCVCamera camControl, NetworkControl networkControl, TextView messageView, ImageView currentStepPic, ImageView goTowardsPic, TextView currentStepNum, TextView goTowardsNum, ProgressBar progressBar) {
 		this(camControl, networkControl, messageView, currentStepPic, goTowardsPic, currentStepNum, goTowardsNum, progressBar, new LinkedList<Bitmap>());
@@ -111,10 +114,11 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mMessageView = messageView;
 		mRoutePictures = routePictures;
 		mNetworkControl = networkControl;
-        mSSDCalibrated = GLOBAL.getSettings().getSSDCalibrated();
+		mMinCalcMutex = new Semaphore(0);
+		mSSDCalibrated = GLOBAL.getSettings().getSSDCalibrated();
 		if (mSSDCalibrated) {
-                mSSDMin = GLOBAL.getSettings().getSSDMin();
-                mSSDMax = GLOBAL.getSettings().getSSDMax();
+			mSSDMin = GLOBAL.getSettings().getSSDMin();
+			mSSDMax = GLOBAL.getSettings().getSSDMax();
 		}
 
 		if (!mRoutePictures.isEmpty()) {
@@ -154,6 +158,8 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 	private Handler mHandler;
 
+	private double mHandlerMinDistResult;
+
 
 	@Override
 	protected Void doInBackground(ArduinoZumoControl... params) {
@@ -167,11 +173,15 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 			@Override
 			public boolean handleMessage(Message msg) {
-				switch (msg.arg1) {
+				switch (msg.what) {
 				case OpenCVCamera.MSG_PICTURE:
 					mTakePictureBuffer = (Bitmap)msg.obj;
 
 					//					releaseLock();
+					return true;
+				case AsyncMinSSDTask.MSG_MIN:
+					mHandlerMinDistResult = (Double)msg.obj;
+					mMinCalcMutex.release();
 					return true;
 				}
 				return false;
@@ -186,33 +196,33 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					return null;
 				}
 				swayingHoming(mRoutePictures);
-//				int counter = 0;
-//				int at = 0;
-//				while (at + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
-//					if (mStop) {
-//						break;
-//					}
-//					Log.i(TAG, "Following Route loop " + counter++);
-//					//					ArrayList<TurnStep> turnsteps = lookAround();
-//					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
-//					//					moveTowardsMin(turnsteps, mRoutePictures);
-//					//					moveTowardsMin(turnsteps, moveTowards);(mRoutePictures.subList(at, 10));
-//					int from = at-PICTURES_WINDOW/2;
-//					int to = at+PICTURES_WINDOW/2;
-//					if (from < 0) {
-//						from = 0;
-//					}
-//					if (to > mRoutePictures.size()) {
-//						to = mRoutePictures.size()-1;
-//					}
-//					int atIncr = doTurnUntilSlope(mRoutePictures.subList(from, to));
-//					at = from + atIncr;
-//					moveForward(100, 200);
-//					Log.i(TAG, "At " + at + " " + from + " " + to + " " + atIncr + " Within " + (mRoutePictures.size() - at) + " of end");
-//				}
-//				Log.i(TAG, "Follow route finished");
-//				publishProgress("Follow route finished");
-//				mFollowingRoute = false;
+				//				int counter = 0;
+				//				int at = 0;
+				//				while (at + WITHIN_BEST_TO_STOP < mRoutePictures.size()) {
+				//					if (mStop) {
+				//						break;
+				//					}
+				//					Log.i(TAG, "Following Route loop " + counter++);
+				//					//					ArrayList<TurnStep> turnsteps = lookAround();
+				//					//					ArrayList<TurnStep> turnsteps = lookAroundFast();
+				//					//					moveTowardsMin(turnsteps, mRoutePictures);
+				//					//					moveTowardsMin(turnsteps, moveTowards);(mRoutePictures.subList(at, 10));
+				//					int from = at-PICTURES_WINDOW/2;
+				//					int to = at+PICTURES_WINDOW/2;
+				//					if (from < 0) {
+				//						from = 0;
+				//					}
+				//					if (to > mRoutePictures.size()) {
+				//						to = mRoutePictures.size()-1;
+				//					}
+				//					int atIncr = doTurnUntilSlope(mRoutePictures.subList(from, to));
+				//					at = from + atIncr;
+				//					moveForward(100, 200);
+				//					Log.i(TAG, "At " + at + " " + from + " " + to + " " + atIncr + " Within " + (mRoutePictures.size() - at) + " of end");
+				//				}
+				//				Log.i(TAG, "Follow route finished");
+				//				publishProgress("Follow route finished");
+				//				mFollowingRoute = false;
 			}
 			else {
 				Log.i(TAG, "Wait lock");
@@ -241,51 +251,80 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			}
 		}
 	}
-	
+
 	private void swayingHoming(List<Bitmap> routePics) {
 		int dir = 1; //right
 		double minDist;
 		double thisDist;
 		int rotateSpeed;
-		
+
 		int speedAdj = 200;
-		
+
 		Bitmap thisPicture;
-		
-//		if (lookahead <= 0 && lookahead > routePics.size()) {
-//			lookahead = routePics.size();
-//		}
-//		
+
+		//		if (lookahead <= 0 && lookahead > routePics.size()) {
+		//			lookahead = routePics.size();
+		//		}
+
+		//		
+		//		// prevent concurrent modification crash
+		//		imagesSSD(routePics.get(0), routePics.get(0));
+
+
+		//		mRoboAntControl.setSpeeds(80, 80);
+
+		boolean doMultiThreaded = false;
+
 		while (true) {
 			if (mStop) {
 				break;
 			}
-			
+
 			thisPicture = takePicture();
-			
-			minDist = Double.MAX_VALUE;
-			
-			for (int i = 0; i < routePics.size(); ++i) {
-                thisDist = imagesSSD(routePics.get(i), thisPicture);
-                if (thisDist < minDist) {
-                	minDist = thisDist;
-                	Log.i(TAG, "loop min is " + minDist + " at " + i);
-                }
+			if (doMultiThreaded) {
+				AsyncMinSSDTask minDistTask = new AsyncMinSSDTask(routePics, mHandler);
+				minDistTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, thisPicture);
+
+				Log.i(TAG, "executed minDistTask, now gonna wait");
+				try {
+					mMinCalcMutex.acquire();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+				Log.i(TAG, "wait done dist is " + mHandlerMinDistResult);
+
+				minDist = mHandlerMinDistResult;
 			}
-           	Log.i(TAG, "final min is " + minDist);
-			
+			else {
+				minDist = Double.MAX_VALUE;
+				//			
+				for (int i = 0; i < routePics.size(); ++i) {
+					thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax);
+					if (thisDist < minDist) {
+						minDist = thisDist;
+						Log.i(TAG, "loop min is " + minDist + " at " + i);
+					}
+				}
+			}
+			Log.i(TAG, "final min is " + minDist);
+
 			rotateSpeed = (int)(speedAdj * minDist);
 
-           	Log.i(TAG, "rotateSpeed is " + rotateSpeed);
-			
-			mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
-			
+			Log.i(TAG, "rotateSpeed is " + rotateSpeed);
+
+			if (rotateSpeed > 40) {
+				mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
+				//				mRoboAntControl.setSpeeds(80, 80);
+			}
+
 			dir = -dir;
 
 			moveForward(80, 200);
 		}
+		mRoboAntControl.setSpeeds(0, 0);
 	}
-	
+
 
 	private int doTurnUntilSlope(List<Bitmap> orientPics) {
 		long start = System.currentTimeMillis();
@@ -349,15 +388,15 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 
 		double[] thisSlopes = new double[n];
 		double[] prevSlopes = new double[n];
-		
+
 		int usingSlopeAt = 0;
 
 		int beenhere = 0;
 		int maxTimesHere = 10;
-		
+
 		boolean toBreak;
 		boolean dirChanged; 
-		
+
 		boolean[] dipFound = new boolean[n];
 		int[] dipFoundFor = new int[n];
 		int dipFoundThresh = 2;
@@ -379,10 +418,10 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				curDif[i] = imagesSSD(picture, orientPics.get(i));
 				stats[i].addValue(curDif[i]);
 				thisMean[i] = stats[i].getMean();
-//
-//				if (thisMean[i] < minMean) {
-//					minMean = thisMean[i];
-//				}
+				//
+				//				if (thisMean[i] < minMean) {
+				//					minMean = thisMean[i];
+				//				}
 
 				//get last regrNum elements from stats
 				int statsN = (int)stats[i].getN();
@@ -405,17 +444,17 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					prevSpeed = 0;
 					dirChanged = true;
 				}
-//				else {
-//					lastDirChange++;
-//					if (lastDirChange > 2*dirChangeTimeout) {
-//						dirChangeTimeout /= 2;
-//					}
-//				}
+				//				else {
+				//					lastDirChange++;
+				//					if (lastDirChange > 2*dirChangeTimeout) {
+				//						dirChangeTimeout /= 2;
+				//					}
+				//				}
 
 				if (count % sendMessageEvery == 0) {
-//					for (i = 0; i < n; ++i) {
-						mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount, i, thisMean[i]));
-//					}
+					//					for (i = 0; i < n; ++i) {
+					mNetworkControl.sendMessage(Util.newLookAroundSSDMessage(messageCount, i, thisMean[i]));
+					//					}
 					mNetworkControl.sendMessage(Util.newLookAroundSkewnessMessage(messageCount, i, slope));
 				}
 
@@ -434,27 +473,27 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					else {
 						meanThresh += 1000000;
 					}
-//					if (speed <= 70 || beenhere > maxTimesHere) {
-//						Log.i(TAG, "Break");
-//						toBreak = true;
-//						break;
-//					}
+					//					if (speed <= 70 || beenhere > maxTimesHere) {
+					//						Log.i(TAG, "Break");
+					//						toBreak = true;
+					//						break;
+					//					}
 				}
-				
-//				else if (dipFound[i] && slope > 0) {
-//					dipFoundFor[i]++;
-//					Log.i(TAG, "dipFoundFor " + dipFoundFor[i] + " " + i);
-//					if (dipFoundFor[i] >= dipFoundThresh) {
-//						toBreak = true;
-//						break;
-//					}
-//				}
-				
+
+				//				else if (dipFound[i] && slope > 0) {
+				//					dipFoundFor[i]++;
+				//					Log.i(TAG, "dipFoundFor " + dipFoundFor[i] + " " + i);
+				//					if (dipFoundFor[i] >= dipFoundThresh) {
+				//						toBreak = true;
+				//						break;
+				//					}
+				//				}
+
 				if (slope < 0) {
 					dipFound[i] = false;
 				}
 
-				
+
 				prevSlopes[i] = slope;
 			}
 
@@ -462,20 +501,20 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 				usingSlopeAt = i;
 				break;
 			}
-			
+
 			if (!dirChanged) {
 				lastDirChange++;
 			}
-			
+
 			slope = Double.MAX_VALUE;
-			
+
 			for (i = 0; i < n; ++i) {
 				if (thisSlopes[i] < slope) {
 					slope = thisSlopes[i];
 					usingSlopeAt = i;
 				}
 			}
-			
+
 			if (slope < 0) {
 				speed = (int)((turnSpeed - 15 * (1 - thisMean[usingSlopeAt]/10000000.)));
 				Log.i(TAG, "Speed is " + speed);
@@ -483,16 +522,16 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			else {
 				speed = turnSpeed;
 			}
-//			if (prevSpeed != speed) {
-				mRoboAntControl.setSpeeds(dir*speed, -dir*speed);
-//				prevSpeed = speed;
-//			}
+			//			if (prevSpeed != speed) {
+			mRoboAntControl.setSpeeds(dir*speed, -dir*speed);
+			//				prevSpeed = speed;
+			//			}
 
 			if (count % sendMessageEvery == 0) {
 				messageCount ++;
 			}
-			
-			
+
+
 			//			Log.i(TAG, "means " + thisMean[0] + " " + prevMean[0] + " " + minMean[0]);
 			picture.recycle();
 			Log.i(TAG, "Time: full loop " + (System.currentTimeMillis() - start));
@@ -1311,25 +1350,25 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 	}
 
-	private double imagesSSD(Bitmap b1, Bitmap b2) {
+	public double imagesSSD(Bitmap b1, Bitmap b2) {
 
 		if (mPixelsToCheck == null) {
-			int pixel, r, g, bl, a;
+			//			int pixel, r, g, bl, a;
 			mPixelsToCheck = new HashSet<Point>();
-			for (int i = 0; i < b1.getWidth(); ++i) {
-				for (int j = 0; j < b1.getHeight(); ++j) {
-					pixel = b1.getPixel(i, j);
-					r = Color.red(pixel);
-					g = Color.green(pixel);
-					bl = Color.blue(pixel);
-					a = Color.alpha(pixel);
-					if (a == 0 || (r == 0 && g == 0 && bl == 0)) {
-					}
-					else {
-						mPixelsToCheck.add(new Point(i, j));
-					}
-				}
-			}
+			//			for (int i = 0; i < b1.getWidth(); ++i) {
+			//				for (int j = 0; j < b1.getHeight(); ++j) {
+			//					pixel = b1.getPixel(i, j);
+			//					r = Color.red(pixel);
+			//					g = Color.green(pixel);
+			//					bl = Color.blue(pixel);
+			//					a = Color.alpha(pixel);
+			//					if (a == 0 || (r == 0 && g == 0 && bl == 0)) {
+			//					}
+			//					else {
+			//						mPixelsToCheck.add(new Point(i, j));
+			//					}
+			//				}
+			//			}
 			for (int i = 0; i < b1.getWidth(); ++i) {
 				for (int j = 0; j < b1.getHeight(); ++j) {
 					//					int pixel = b1.getPixel(i, j);
@@ -1376,7 +1415,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		}
 		double calibrated = (ssd - mSSDMin)/(mSSDMax - mSSDMin);
 		if (calibrated < 0 || calibrated > 1) {
-//			throw(new RuntimeException("Calibrated is " + calibrated));
+			//			throw(new RuntimeException("Calibrated is " + calibrated));
 			Log.w(TAG, "Calibrated is < 0 or > 1 " + calibrated + ssd);
 			if (calibrated < 0) {
 				mSSDMin = ssd;
@@ -1384,9 +1423,9 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 			else {
 				mSSDMax = ssd;
 			}
-			
+
 			GLOBAL.getSettings().setSSDCalibrationResults(true, mSSDMin, mSSDMax);
-			
+
 			return normalizeSSD(ssd);
 		}
 		return calibrated;
@@ -1483,7 +1522,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 	private double mCalibrateSSDMAX;
 
 	private Bitmap mCalibrateBmp;
-	
+
 	private long mLastTimeChanged;
 
 	public void calibrateSSD() {
@@ -1491,20 +1530,20 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mCalibrateSSDMin = Double.MAX_VALUE;
 		mCalibrateSSDMAX = Double.MIN_VALUE;
 		mCalibrateBmp = mCameraControl.getPicture();
-		
+
 		mSSDCalibrated = false;
-		
+
 		mLastTimeChanged = System.currentTimeMillis();
 
 		mHandler.postDelayed(new Runnable() {
-			
+
 
 			@Override
 			public void run() {
 				Bitmap bmp = mCameraControl.getPicture();
 				boolean changed = false;
-				
-				double ssd = imagesSSD(bmp, mCalibrateBmp);
+
+				double ssd = Util.imagesSSD(bmp, mCalibrateBmp);
 				if (ssd < mCalibrateSSDMin) {
 					mCalibrateSSDMin = ssd;
 					changed = true;
@@ -1513,7 +1552,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					mCalibrateSSDMAX = ssd;
 					changed = true;
 				}
-				
+
 				if (changed) {
 					mLastTimeChanged = System.currentTimeMillis();
 				}
@@ -1529,10 +1568,10 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 					}
 				}
 				mHandler.post(this);
-				
+
 			}
 		}, 100);
-		
+
 	}
 
 }
