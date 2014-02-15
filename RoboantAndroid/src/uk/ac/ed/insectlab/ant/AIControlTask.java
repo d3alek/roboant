@@ -11,6 +11,7 @@ import java.util.concurrent.Semaphore;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
+import uk.co.ed.insectlab.ant.R;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.AsyncTask;
@@ -38,8 +39,7 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 	private static final int TURN_SPEED = 100;
 
 	private static final boolean AWAIT_CONFIRM = false;
-
-
+	
 	double OPTIC_FLOW_TURN = 10/360.;
 
 	private ArduinoZumoControl mRoboAntControl;
@@ -108,7 +108,8 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mCurrentStepNum = currentStepNum;
 		mGoTowardsNum = goTowardsNum;
 		mProgressBar = progressBar;
-		mCurrentStepPic = currentStepPic;
+		mCurrentStepPic = (ImageView)findViewById(R.id.pic_current_step);
+		mGoTowardsPic = (ImageView)findViewById(R.id.pic_step_towards);
 		mGoTowardsPic = goTowardsPic;
 		mCameraControl = camControl;
 		mMessageView = messageView;

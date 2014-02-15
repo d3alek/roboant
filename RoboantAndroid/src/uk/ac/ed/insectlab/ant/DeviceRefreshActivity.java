@@ -238,7 +238,7 @@ public class DeviceRefreshActivity extends Activity {
     }
 
     private void showConsoleActivity(UsbSerialDriver driver) {
-        AntControlActivity.show(this, driver);
+        MainActivity.show(this, driver);
     }
 
 }
