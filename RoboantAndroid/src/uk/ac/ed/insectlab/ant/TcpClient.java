@@ -149,14 +149,11 @@ public class TcpClient implements NetworkControl {
 			//here you must put your computer's IP address.
 			InetAddress serverAddr = InetAddress.getByName(serverip);
 
-			//            Log.e("TCP Client", "C: Connecting...");
-
 			//create a socket to make the connection with the server
 			Socket socket = new Socket(serverAddr, serverport);
 			socket.setSoTimeout(1000);
 
 			try {
-
 				mMessageListener.connected();
 				mLastKeepAlive = System.currentTimeMillis();
 
@@ -171,7 +168,6 @@ public class TcpClient implements NetworkControl {
 
 				//in this while the client listens for the messages sent by the server
 				while (mRun) {
-
 					//					mHandler.post(executeQueueFront);
 					executeQueueFront.run();
 
@@ -205,7 +201,7 @@ public class TcpClient implements NetworkControl {
 							continue;
 						}
 					} catch (SocketTimeoutException e) {
-						//                		Log.i(TAG, "read timeout");
+						Log.i(TAG, "read timeout");
 						mServerMessage = null;
 					}
 
@@ -216,28 +212,26 @@ public class TcpClient implements NetworkControl {
 
 				}
 
-				Log.e("RESPONSE FROM SERVER", "S: Received Message: '" + mServerMessage + "'");
 
 			} catch (IOException e) {
 
-				//                Log.e("TCP", "S: Error", e);
+				if (!mStopped) {
+					mMessageListener.disconnected();
+				}
 
 			} finally {
 				//the socket must be closed. It is not possible to reconnect to this socket
 				// after it is closed, which means a new socket instance has to be created.
 				socket.close();
-				if (!mStopped) {
-					mMessageListener.disconnected();
-				}
+
 			}
 
 		} catch (Exception e) {
 
-			//            Log.e("TCP", "C: Error", e);
 			//        	Log.e("TCP", "Connection error");
-			if (!mStopped) {
-				mMessageListener.disconnected();
-			}
+			//			if (!mStopped) {
+			//				mMessageListener.disconnected();
+			//			}
 
 		}
 

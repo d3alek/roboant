@@ -42,6 +42,7 @@ public class RoboAntControl implements ArduinoZumoControl {
 	}
 
 	private synchronized void sendSpeeds() {
+		Log.i(TAG, "Sending speeds " + mLeftSpeed + " " + mRightSpeed);
 		String str = "l" + mLeftSpeed + "r" + mRightSpeed + "\n";
 		mSerialIoManager.writeAsync(str.getBytes()); 
 		try {

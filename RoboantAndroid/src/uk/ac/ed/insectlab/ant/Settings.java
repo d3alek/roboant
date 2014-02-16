@@ -15,6 +15,8 @@ public class Settings {
 	private static final String KEY_SSD_MIN = "ssd_min";
 	private static final String KEY_SSD_MAX = "ssd_max";
 	private static final String KEY_SSD_CALIBRATED = "ssd_calibrated";
+	private static final String KEY_SERVER_IP = "server_ip";
+	private static final String KEY_SERVER_PORT = "server_port";
 	private SharedPreferences mPrefs;
 
 	public Settings(Context context) {
@@ -65,4 +67,20 @@ public class Settings {
 		}
 		e.apply();
 	}
+
+	public void setServerAddress(String ip, String port) {
+		Editor e = mPrefs.edit();
+		e.putString(KEY_SERVER_IP, ip);
+		e.putInt(KEY_SERVER_PORT, Integer.parseInt(port));
+		e.apply();
+	}
+	
+	public String getServerIP() {
+		return mPrefs.getString(KEY_SERVER_IP, "not set");
+	}
+	
+	public int getServerPort() {
+		return mPrefs.getInt(KEY_SERVER_PORT, 0);
+	}
+
 }

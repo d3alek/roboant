@@ -108,8 +108,9 @@ public class AIControlTask extends AsyncTask<ArduinoZumoControl, String, Void> i
 		mCurrentStepNum = currentStepNum;
 		mGoTowardsNum = goTowardsNum;
 		mProgressBar = progressBar;
-		mCurrentStepPic = (ImageView)findViewById(R.id.pic_current_step);
-		mGoTowardsPic = (ImageView)findViewById(R.id.pic_step_towards);
+		//TODO
+//		mCurrentStepPic = (ImageView)findViewById(R.id.pic_current_step);
+//		mGoTowardsPic = (ImageView)findViewById(R.id.pic_step_towards);
 		mGoTowardsPic = goTowardsPic;
 		mCameraControl = camControl;
 		mMessageView = messageView;

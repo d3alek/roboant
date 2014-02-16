@@ -21,7 +21,7 @@ public class GLOBAL extends Application {
 		super.onCreate();
 	}
 	
-	static Settings getSettings() {
+	static synchronized Settings getSettings() {
 		return mSettings;
 	}
 }

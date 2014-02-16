@@ -22,9 +22,11 @@
         android:allowBackup="true"
         android:name="uk.ac.ed.insectlab.ant.GLOBAL" >
         <activity
-            android:name="uk.ac.ed.insectlab.ant.DeviceRefreshActivity"
+            android:name="uk.ac.ed.insectlab.ant.MainActivity"
+            android:screenOrientation="portrait"
             android:label="@string/app_name"
-            android:theme="@android:style/Theme.Holo.Light">
+            android:theme="@android:style/Theme.Holo.Light"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -38,12 +40,6 @@
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
-        </activity>
-        <activity
-            android:name="uk.ac.ed.insectlab.ant.MainActivity"
-            android:screenOrientation="portrait"
-            android:label="@string/app_name"
-            android:theme="@android:style/Theme.Holo.Light">
         </activity>
     </application>
 

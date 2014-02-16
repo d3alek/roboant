@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/Card"
+    android:orientation="vertical" >
+    
+    <TextView 
+        android:id="@+id/label"
+        style="@style/CardLabel"
+        />
+    
+    <ProgressBar 
+        android:id="@+id/status"
+        style="@style/CardStatus"
+        android:indeterminate="true"
+        android:layout_alignParentRight="true"/>
+    
+    <TextView 
+        android:id="@+id/statusOK"
+        style="@style/CardStatusOk"
+        android:indeterminate="true"
+        android:layout_alignParentRight="true"/>
+
+    <TextView 
+        android:id="@+id/statusError"
+        style="@style/CardStatusError"
+        android:indeterminate="true"
+        android:layout_alignParentRight="true"/>
+
+</RelativeLayout>
