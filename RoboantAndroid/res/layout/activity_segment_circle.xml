@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/fragment_container"/>
+    
+    <SeekBar
+        android:id="@+id/circleMin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+
+    <SeekBar
+        android:id="@+id/circleMax"
+        android:layout_below="@+id/circleMin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        />
+    
+    <Button 
+        android:id="@+id/btn_segment_circle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:text="@string/segment_again"/>
+
+</RelativeLayout>

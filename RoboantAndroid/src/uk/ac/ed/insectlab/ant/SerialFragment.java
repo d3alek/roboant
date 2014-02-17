@@ -342,4 +342,18 @@ public class SerialFragment extends CardFragment {
 	public void setSpeeds(int left, int right) {
 		mRoboAntControl.setSpeeds(left, right);
 	}
+
+
+	public void usbDisconnectedIntentReceived() {
+		stopIoManager();
+		if (sDriver != null) {
+			try {
+				sDriver.close();
+			} catch (IOException e) {
+				// Ignore.
+			}
+			sDriver = null;
+		}
+		mHandler.sendEmptyMessageDelayed(MESSAGE_REFRESH, REFRESH_TIMEOUT_MILLIS);
+	}
 }

@@ -2,6 +2,7 @@ package uk.ac.ed.insectlab.ant;
 
 import java.util.regex.Pattern;
 
+import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.ac.ed.insectlab.ant.ManualControlFragment.ManualControlListener;
 import uk.ac.ed.insectlab.ant.NetworkFragment.NetworkListener;
 import uk.ac.ed.insectlab.ant.SerialFragment.SerialListener;
@@ -9,7 +10,11 @@ import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
@@ -18,11 +23,13 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-public class MainActivity extends Activity implements NetworkListener, SerialListener, ManualControlListener {
+public class MainActivity extends Activity implements NetworkListener,
+	SerialListener, ManualControlListener, CameraListener {
 
 	private static final int CAMERA_NUMBER = 1;
 
@@ -37,6 +44,15 @@ public class MainActivity extends Activity implements NetworkListener, SerialLis
 	private NetworkFragment mNetworkFragment;
 
 	private SerialFragment mSerialFragment;
+	
+	BroadcastReceiver mUsbDisconnectedReceiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if (mSerialFragment != null) {
+				mSerialFragment.usbDisconnectedIntentReceived();
+			}
+		}
+	};
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -57,6 +73,7 @@ public class MainActivity extends Activity implements NetworkListener, SerialLis
 
 		transaction.add(R.id.fragment_container, mNetworkFragment);
 		transaction.add(R.id.fragment_container, mSerialFragment);
+//		transaction.add(R.id.fragment_container, new CameraFragment());
 
 		transaction.commit();
 	}
@@ -129,6 +146,10 @@ public class MainActivity extends Activity implements NetworkListener, SerialLis
 		mManualControlFragment = new ManualControlFragment();
 		getFragmentManager().beginTransaction()
 		.add(R.id.fragment_container, mManualControlFragment).commit();
+		
+		IntentFilter intentFilter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
+		
+		registerReceiver(mUsbDisconnectedReceiver, intentFilter);
 	}
 
 	@Override
@@ -137,6 +158,7 @@ public class MainActivity extends Activity implements NetworkListener, SerialLis
 			getFragmentManager().beginTransaction()
 			.remove(mManualControlFragment).commit();
 		}
+		unregisterReceiver(mUsbDisconnectedReceiver);
 	}
 
 	@Override
@@ -145,6 +167,24 @@ public class MainActivity extends Activity implements NetworkListener, SerialLis
 		if (mSerialFragment != null) {
 			mSerialFragment.setSpeeds(left, right);
 		}
+	}
+
+	@Override
+	public void cameraViewStarted(int width, int height) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void cameraViewStopped() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onLensFound(boolean b) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

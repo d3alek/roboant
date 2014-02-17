@@ -41,6 +41,13 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/device_filter" />
         </activity>
+        
+       	<activity 
+       	    android:name="uk.ac.ed.insectlab.ant.SegmentCircleActivity"
+       	    android:label="@string/segment_circle"
+       	    android:theme="@android:style/Theme.Holo.Light"
+       	    android:screenOrientation="portrait"
+       	    android:parentActivityName="uk.ac.ed.insectlab.ant.MainActivity"></activity>
     </application>
 
 </manifest>

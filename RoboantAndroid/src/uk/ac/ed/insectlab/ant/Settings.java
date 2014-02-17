@@ -27,22 +27,20 @@ public class Settings {
 		return mPrefs;
 	}
 
-	public Point3 loadLens() {
-		if (mPrefs.getFloat(KEY_LENS_RAD, -1) != -1) {
-			Point3 lens = new Point3(
-					(double)mPrefs.getFloat(KEY_LENS_X, 0),
-					(double)mPrefs.getFloat(KEY_LENS_Y, 0),
-					(double)mPrefs.getFloat(KEY_LENS_RAD, 0));
-			return lens;
+	public Lens loadLens() {
+		if (mPrefs.getInt(KEY_LENS_RAD, -1) != -1) {
+			return new Lens(mPrefs.getInt(KEY_LENS_X, 0),
+					mPrefs.getInt(KEY_LENS_Y, 0),
+					mPrefs.getInt(KEY_LENS_RAD, 0));
 		}
 		return null;
 	}
 
-	public void saveLens(Point3 lens) {
+	public void saveLens(Lens lens) {
 		Editor e = mPrefs.edit();
-		e.putFloat(KEY_LENS_X, (float)lens.x);
-		e.putFloat(KEY_LENS_Y, (float)lens.y);
-		e.putFloat(KEY_LENS_RAD, (float)lens.z);
+		e.putInt(KEY_LENS_X, lens.x);
+		e.putInt(KEY_LENS_Y, lens.y);
+		e.putInt(KEY_LENS_RAD, lens.radius);
 		e.apply();
 	}
 
