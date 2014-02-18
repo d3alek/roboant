@@ -7,6 +7,7 @@ from pygame.locals import *
 
 from twisted.internet import protocol, reactor
 from twisted.internet.task import LoopingCall
+from twisted.protocols.basic import LineReceiver
 
 import qrcode
 
@@ -31,36 +32,12 @@ DELTA_MIN = 0
 toSendLeftWheelVal = 0
 toSendRightWheelVal = 0
 
-print "Joysticks", joysticks
-
 for joystick in joysticks:
+    name = joystick.get_name().lower()
+    if name.find('accelerometer') != -1:
+        continue
     joystick.init()
-    print joystick.get_numaxes()
-    pass
-
-def findMyIP():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("gmail.com",80))
-    sockname = s.getsockname()[0]
-    s.close()
-    return sockname
-
-
-def sendWheels(speedL, speedR):
-    if mProtocol != None:
-        mProtocol.sendLine('l' + str(int(speedL)) + 'r' + str(int(speedR)))
-
-def moveLeftWheel(speed):
-    global toSendLeftWheelVal
-    toSendLeftWheelVal = speed
-    #toSendLeftWheelVals += [speed]
-
-def moveRightWheel(speed):
-    global toSendRightWheelVal
-    toSendRightWheelVal = speed
-    #toSendRightWheelVals += [speed]
-
-from twisted.protocols.basic import LineReceiver
+    print "Initialized Joystick", joystick.get_name()
 
 mProtocol = None
 
@@ -77,59 +54,65 @@ class AntRobotControlFactory(protocol.Factory):
 
 reactor.listenTCP(SERVER_PORT, AntRobotControlFactory())
 
+
+def findMyIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("gmail.com",80))
+    sockname = s.getsockname()[0]
+    s.close()
+    return sockname
+
+def sendWheels(speedL, speedR):
+    if mProtocol != None:
+        mProtocol.sendLine('l' + str(int(speedL)) + 'r' + str(int(speedR)))
+
+def moveLeftWheel(speed):
+    global toSendLeftWheelVal
+    toSendLeftWheelVal = speed
+
+def moveRightWheel(speed):
+    global toSendRightWheelVal
+    toSendRightWheelVal = speed
+
+
+
 axis4 = 0
 
-leftDown = rightDown = False
+leftDown = rightDown = upDown = downDown = False
 
 def events_tick():
-    global axisX, axisY, DELTA_MIN, axis4, leftDown, rightDown
+    global axisX, axisY, DELTA_MIN, axis4, leftDown, rightDown, upDown, downDown
     change4 = False
     changeX = False
 
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
-            #conn.close()
-        elif event.type == MOUSEMOTION:
-            mousex, mousey = event.pos
-            if mousex < screenWidth / 8:
-                if mousey > screenHeight / 2:
-                    scrollingLeft = True
-            else:
-                scrollingLeft = False
-            if mousex > 7 * screenWidth / 8:
-                if mousey > screenHeight / 2:
-                    scrollingRight = True
-            else:
-                scrollingRight = False
-
+            reactor.stop()
         elif event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 pygame.event.post(pygame.event.Event(QUIT))
             if event.key == K_RIGHT:
                 rightDown = True
-                #moveLeftWheel(100)
             if event.key == K_LEFT:
                 leftDown = True
-                #moveRightWheel(100)
-#            if event.key == K_UP:
-                #change4 = True
-                #axis4 += 50
-                ##mSpeed += 1
-            #if event.key == K_DOWN:
-                #change4 = True 
-                #axis4 -= 50
-            #if event.key == K_RIGHT:
-                #changeX = True
-                #axisX += 50
-            #if event.key == K_LEFT:
-                #changeX = True 
-                #axisX -= 50
+            if event.key == K_UP:
+                upDown = True
+            if event.key == K_DOWN:
+                downDown = True
+
         elif event.type == KEYUP:
             if event.key == K_RIGHT:
                 rightDown = False
             if event.key == K_LEFT:
                 leftDown = False
+            if event.key == K_UP:
+                upDown = False 
+            if event.key == K_DOWN:
+                downDown = False 
+
+
+
         elif event.type == JOYBUTTONDOWN:
             print "JOYBUTTONDOWN"
             print event.button
@@ -157,18 +140,18 @@ def events_tick():
     if (changeX or change4) and not (axis4 == 0 and not change4):
         if abs(axis4) < DELTA_MIN:
             axis4 = 0
-        ratio = 0.5 + axisX / 800.
-        #ratio = axisX / 400.
-        #left = int((1 + ratio) * axis4)
-        #if left > 400:
-        #    left = 400 
-        #right = int((1 - ratio) * axis4)
-        #if right > 400:
-        #    right = 400
-        #moveLeftWheel(left)
-        #moveRightWheel(right)
-        moveLeftWheel(int(ratio * axis4))
-        moveRightWheel(int((1-ratio) * axis4))
+        #ratio = 0.5 + axisX / 800.
+        ratio = axisX / 400.
+        left = int((1 + ratio) * axis4)
+        if left > 400:
+            left = 400 
+        right = int((1 - ratio) * axis4)
+        if right > 400:
+            right = 400
+        moveLeftWheel(left)
+        moveRightWheel(right)
+       # moveLeftWheel(int(ratio * axis4))
+       # moveRightWheel(int((1-ratio) * axis4))
 
         #else:
             #moveRightWheel(abs(axisY))
@@ -179,16 +162,24 @@ def events_tick():
     elif axis4 == 0:
        moveLeftWheel(axisX/2.) 
        moveRightWheel(-axisX/2.) 
-    else:
-        toSendLeftWheelVal = 0
-        toSendRightWheelVal = 0
-
-
+    #else:
+        #toSendLeftWheelVal = 0
+        #toSendRightWheelVal = 0
 
     if leftDown:
-        moveLeftWheel(200)
+        moveRightWheel(100)
     if rightDown:
-        moveRightWheel(200)
+        moveLeftWheel(100)
+
+    if upDown:
+        moveRightWheel(100)
+        moveLeftWheel(100)
+    
+    if downDown:
+        moveRightWheel(-100)
+        moveLeftWheel(-100)
+    
+
 
 def send_tick():
     global toSendRightWheelVal, toSendLeftWheelVal 
@@ -218,7 +209,5 @@ tick3 = LoopingCall(qrcode_tick)
 tick3.start(1.0)
 
 reactor.run()
-
-#conn.close()
 
 
