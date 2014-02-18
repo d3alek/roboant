@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,21 +23,36 @@ import com.google.zxing.integration.android.IntentResult;
 public class NetworkFragment extends CardFragment {
 	protected static final long CONNECT_ATTEMPT_PERIOD = 2000;
 	protected static final String TAG = NetworkFragment.class.getSimpleName();
-	private TcpClient mTcpClient;
-	private Runnable mConnectorRunnable;
-	private Handler mHandler;
+	protected static final int MESSAGE_CAMERA_FREE = 0;
+	private static TcpClient mTcpClient;
+	private static Handler mHandler;
 	private EditText mServerIP;
 	private EditText mServerPort;
 	Pattern mPattern = Pattern.compile("l(-?\\d+)r(-?\\d+)");
 	NetworkListener mNetworkListener;
-	private ConnectTask mConnectTask;
+	private static ConnectTask mConnectTask;
+	static class ConnectorRunnable implements Runnable {
+		private NetworkFragment mFragment;
+		public ConnectorRunnable(NetworkFragment fragment) {
+			mFragment = fragment;
+		}
+		public void run() {
+			if (mConnectTask == null) {
+				Log.i(TAG, "Trying to connect to server");
+				mConnectTask = mFragment.new ConnectTask();
+				mConnectTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+			}
+			mHandler.postDelayed(this, CONNECT_ATTEMPT_PERIOD);
+		}
+	}
+	private static Runnable mConnectorRunnable;
 
 	interface NetworkListener {
 		void speedReceivedFromNetwork(int left, int right);
-
 		void serverConnected();
-
 		void serverDisconnected();
+
+		void freeCamera(Handler handler, int what);
 	}
 
 	@Override
@@ -53,7 +69,21 @@ public class NetworkFragment extends CardFragment {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mHandler = new Handler();
+		mConnectorRunnable = new ConnectorRunnable(this);
+		mHandler = new Handler(new Handler.Callback() {
+			@Override
+			public boolean handleMessage(Message msg) {
+				switch (msg.what) {
+				case MESSAGE_CAMERA_FREE:
+					IntentIntegrator integrator = new IntentIntegrator(NetworkFragment.this);
+					integrator.initiateScan();
+					break;
+				default: Log.i(TAG, "Unhandled message " + msg);
+				}
+
+				return false;
+			}
+		}); 
 	}
 
 	@Override
@@ -72,8 +102,8 @@ public class NetworkFragment extends CardFragment {
 
 			@Override
 			public void onClick(View v) {
-				IntentIntegrator integrator = new IntentIntegrator(NetworkFragment.this);
-				integrator.initiateScan();
+				mNetworkListener.freeCamera(mHandler, MESSAGE_CAMERA_FREE);
+
 			}
 		});
 
@@ -137,8 +167,6 @@ public class NetworkFragment extends CardFragment {
 					mNetworkListener.serverDisconnected();
 				}
 
-
-
 				@Override
 				public void connected() {
 					getActivity().runOnUiThread(new Runnable() {
@@ -152,7 +180,6 @@ public class NetworkFragment extends CardFragment {
 					GLOBAL.getSettings().setServerAddress(mServerIP.getText().toString(),
 							mServerPort.getText().toString());
 					mNetworkListener.serverConnected();
-					mHandler.removeCallbacks(mConnectorRunnable);
 				}
 			});
 
@@ -171,27 +198,12 @@ public class NetworkFragment extends CardFragment {
 			super.onPostExecute(result);
 			mTcpClient = null;
 			mConnectTask = null;
-			postConnectorRunnable();
 		}
 
 	}
 
 	private void postConnectorRunnable() {
-
-		mConnectorRunnable = new Runnable() {
-
-			public void run() {
-				if (mTcpClient != null || mConnectTask != null) {
-					return;
-				}
-				Log.i(TAG, "Trying to connect to server");
-				mConnectTask = new ConnectTask();
-				mConnectTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-				postConnectorRunnable();
-				mHandler.postDelayed(this, CONNECT_ATTEMPT_PERIOD);
-			}
-		};
-
+		Log.i(TAG, "postConnectorRunnable");
 		mHandler.postDelayed(mConnectorRunnable, CONNECT_ATTEMPT_PERIOD);
 	}
 

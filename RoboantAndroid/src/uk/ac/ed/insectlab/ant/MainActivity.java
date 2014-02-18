@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.view.Menu;
@@ -49,6 +50,8 @@ SerialListener, ManualControlListener, CameraListener {
 		}
 	};
 
+	private CameraFragment mCameraFragment;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -64,11 +67,12 @@ SerialListener, ManualControlListener, CameraListener {
 
 		mNetworkFragment = new NetworkFragment();
 		mSerialFragment = new SerialFragment();
+		mCameraFragment = new CameraFragment();
 
 
 		transaction.add(R.id.fragment_container, mNetworkFragment);
 		transaction.add(R.id.fragment_container, mSerialFragment);
-		transaction.add(R.id.fragment_container, new CameraFragment());
+		transaction.add(R.id.fragment_container, mCameraFragment);
 
 		transaction.commit();
 	}
@@ -180,6 +184,18 @@ SerialListener, ManualControlListener, CameraListener {
 	public void onLensFound(boolean b) {
 		// TODO Auto-generated method stub
 
+	}
+
+	@Override
+	public void freeCamera(Handler handler, int what) {
+		if (mCameraFragment == null) {
+			handler.sendEmptyMessage(what);
+		}
+
+		else {
+			mCameraFragment.releaseCamera();
+			handler.sendEmptyMessage(what);
+		}
 	}
 
 }

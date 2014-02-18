@@ -18,5 +18,10 @@ public class CroppableCameraView extends JavaCameraView {
 		mFrameWidth = width;
 		AllocateCache();
 	}
+	
+	@Override
+	public void disconnectCamera() {
+		super.disconnectCamera();
+	}
 
 }

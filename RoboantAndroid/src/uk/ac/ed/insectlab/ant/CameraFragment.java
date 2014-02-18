@@ -345,4 +345,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		}
 	}
 
+	public void releaseCamera() {
+		mOpenCvCameraView.disconnectCamera();
+	}
+
 }
