@@ -33,7 +33,7 @@ import android.view.Surface;
 
 public class Util {
 
-	private static final String DIR_NAME = "RoboAnt2";
+	private static final String DIR_NAME = "RoboAnt";
 
 
 	protected static final String TAG = "Util";
@@ -127,17 +127,11 @@ public class Util {
 	}
 
 	public static File getNewRouteStorageDir(Context context) {
-		// To be safe, you should check that the SDCard is mounted
-		// using Environment.getExternalStorageState() before doing this.
-
 		File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
 				Environment.DIRECTORY_PICTURES), DIR_NAME);
 		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
 		File routeStorageDir = new File(mediaStorageDir, "ROUTE_"+timeStamp);
-		// This location works best if you want the created images to be shared
-		// between applications and persist after your app has been uninstalled.
 
-		// Create the storage directory if it does not exist
 		if (! routeStorageDir.exists()){
 			if (! routeStorageDir.mkdirs()){
 				Log.d("Util", "failed to create directory");
@@ -152,8 +146,6 @@ public class Util {
 	}
 
 	public static File getRoutePictureFile(File dir, int num) {
-		// To be safe, you should check that the SDCard is mounted
-		// using Environment.getExternalStorageState() before doing this.
 
 		File routePictureFile = new File(dir.getPath() + File.separator + "IMG_" + num + ".jpg");
 
@@ -241,10 +233,6 @@ public class Util {
 		return output;
 	}
 
-	public static String newLookAroundSSDMessage(int turnDeg, int routeStep, double dist) {
-		return NetworkControl.SSD_MESSAGE + " " + turnDeg + " " + routeStep + " " + dist;
-	}
-
 	public static Bitmap rotateBitmap(Bitmap bmp, int rotate) {
 		Bitmap targetBitmap = Bitmap.createBitmap(bmp.getWidth(), bmp.getHeight(), bmp.getConfig());
 		Canvas canvas = new Canvas(targetBitmap);
@@ -264,23 +252,19 @@ public class Util {
 		return min;
 	}
 
-	public static String newLookAroundSkewnessMessage(int count, int routeStep, double skewness) {
-		return NetworkControl.SKEWNESS_MESSAGE + " " + count + " " + routeStep + " " + skewness;
-	}
-
 	private class Point {
 		int x, y;
 		public Point(int x, int y) {
 			this.x = x; this.y = y;
 		}
 	}
-	
+
 	public static double imagesSSD(Bitmap b1, Bitmap b2) {
 		return imagesSSD(b1, b2, 0, 0);
 	}
 
 	public synchronized static double imagesSSD(Bitmap b1, Bitmap b2, double ssdMin, double ssdMax) {
-		
+
 		double ssd = 0;
 		int pixel1, pixel2, r1, r2, g1, g2, bl1, bl2;
 
@@ -294,7 +278,7 @@ public class Util {
 
 
 			}
-			
+
 		}
 		Log.i(TAG, "SSD " + ssd);
 		if (ssdMin == ssdMax && ssdMax == 0) {
@@ -303,12 +287,11 @@ public class Util {
 		return normalizeSSD(ssd, ssdMin, ssdMax);
 
 	}
-	
+
 	private static double normalizeSSD(double ssd, double ssdMin, double ssdMax) {
 
 		double calibrated = (ssd - ssdMin)/(ssdMax - ssdMin);
 		if (calibrated < 0 || calibrated > 1) {
-//			throw(new RuntimeException("Calibrated is " + calibrated));
 			Log.w(TAG, "Calibrated is < 0 or > 1 " + calibrated + " " + ssd);
 			if (calibrated < 0) {
 				ssdMin = ssd;
@@ -316,9 +299,9 @@ public class Util {
 			else {
 				ssdMax = ssd;
 			}
-			
+
 			GLOBAL.getSettings().setSSDCalibrationResults(true, ssdMin, ssdMax);
-			
+
 			return normalizeSSD(ssd, ssdMin, ssdMax);
 		}
 		return calibrated;

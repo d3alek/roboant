@@ -14,12 +14,15 @@
         opencv:camera_id="front"
         android:layout_height="240dp"/>
 
-<!--     <Button  -->
-<!--         android:id="@+id/btn_segment_circle" -->
-<!--         android:layout_width="wrap_content" -->
-<!--         android:layout_height="wrap_content" -->
-<!--         android:layout_centerHorizontal="true" -->
-<!--         android:layout_alignParentBottom="true" -->
-<!--         android:text="@string/segment_circle"/> -->
+    <Button 
+        android:id="@+id/btn_segment_circle"
+        style="?android:attr/buttonStyleSmall"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:text="@string/segment_circle"
+        android:textColor="@android:color/secondary_text_dark_nodisable"/>
 
 </RelativeLayout>

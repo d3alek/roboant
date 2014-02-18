@@ -1,7 +1,5 @@
 package uk.ac.ed.insectlab.ant;
 
-import org.opencv.core.Point3;
-
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;

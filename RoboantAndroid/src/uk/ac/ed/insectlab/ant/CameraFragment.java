@@ -127,68 +127,30 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 		View view = inflater.inflate(R.layout.fragment_camera, container, false);
 
-		//		Button capture = (Button)view.findViewById(R.id.btn_take_picture);
-		//		capture.setOnClickListener(new Button.OnClickListener() {
-		//
-		//			@Override
-		//			public void onClick(View v) {
-		//				takePicture();
-		//			}
-		//
-		//		});
-		//		Camera camera =  Util.getCameraInstance(CAMERA_NUMBER);
-		//		Util.setCameraDisplayOrientation(this, CAMERA_NUMBER, camera);
-		//		camera.release();
-
 		mOpenCvCameraView = (CroppableCameraView) view.findViewById(R.id.camera_preview);
 		mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
 
 		mOpenCvCameraView.setCvCameraViewListener(this);
 
-		//		mSegmentCircle = (Button)view.findViewById(R.id.btn_segment_circle);
-		//
-		//		if (mShowSegmentButton) {
-		//			mSegmentCircle.setOnClickListener(new View.OnClickListener() {
-		//				@Override
-		//				public void onClick(View v) {
-		//					Intent i = new Intent(getActivity(), SegmentCircleActivity.class);
-		//					startActivityForResult(i, REQ_SEGMENT_CIRCLE);
-		//				}
-		//			});
-		//		}
-		//		else {
-		//			mSegmentCircle.setVisibility(View.GONE);
-		//		}
+		mSegmentCircle = (Button)view.findViewById(R.id.btn_segment_circle);
+
+		if (mShowSegmentButton) {
+			mSegmentCircle.setOnClickListener(new View.OnClickListener() {
+				@Override
+				public void onClick(View v) {
+					Intent i = new Intent(getActivity(), SegmentCircleActivity.class);
+					startActivityForResult(i, REQ_SEGMENT_CIRCLE);
+				}
+			});
+		}
+		else {
+			mSegmentCircle.setVisibility(View.GONE);
+		}
 
 		setLabel("Camera");
 
 		return view;
 	}
-
-
-	//	private void takePicture() {
-	//		if (mCamera != null) {
-	//			if (mAIControl != null) {
-	//				takeAIPicture();
-	//			}
-	//			else {
-	//				//				mCamera.getPicture(new OpenCVCamera.PictureListener() {
-	//				//					@Override
-	//				//					public void pictureReceived(final Bitmap picture) {
-	//				//						handler.post(new Runnable() {
-	//				//
-	//				//							@Override
-	//				//							public void run() {
-	//				//								mStepTowardsPic.setImageBitmap(picture);
-	//				//
-	//				//							}
-	//				//						});
-	//				//					}
-	//				//				});
-	//				mStepTowardsPic.setImageBitmap(getCameraPicture());
-	//			}
-	//		}
-	//	}
 
 	@Override
 	public void onDestroy() {

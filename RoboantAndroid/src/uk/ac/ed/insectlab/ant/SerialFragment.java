@@ -112,48 +112,6 @@ public class SerialFragment extends CardFragment {
 			Log.i(TAG, "Dummy simpleTurnInPlaceBlocking");
 
 		}
-
-		@Override
-		public void doGoTowards(LookAroundListener aiControlTask,
-				int minStep) {
-			Log.i(TAG, "Dummy doGoTowards");
-
-		}
-
-		@Override
-		public void doLookAroundStep(LookAroundListener aiControlTask) {
-			Log.i(TAG, "Dummy doLookAroundStep");
-		}
-
-		@Override
-		public void setLeftSpeed(int speed) {
-			Log.i(TAG, "Dummy setLeftSpeed");
-		}
-
-		@Override
-		public void setRightSpeed(int speed) {
-			Log.i(TAG, "Dummy setRightSpeed");
-		}
-
-		@Override
-		public void calibrate() {
-			Log.i(TAG, "Dummy calibrate");
-		}
-
-		@Override
-		public void lookAroundDone() {
-			Log.i(TAG, "Dummy lookAroundDone");
-		}
-
-		@Override
-		public void goTowardsDone() {
-			Log.i(TAG, "Dummy goTowardsDone");
-		}
-
-		@Override
-		public void lookAroundStepDone(int parseInt) {
-			Log.i(TAG, "Dummy lookAroundStepDone");
-		}
 	}
 
 	@Override
@@ -193,48 +151,6 @@ public class SerialFragment extends CardFragment {
 
 	private void refreshDeviceList() {
 		setStatus(CardStatus.LOADING);
-
-		//        new AsyncTask<Void, Void, List<DeviceEntry>>() {
-		//            private UsbSerialDriver mDriver;
-		//
-		//            @Override
-		//            protected List<DeviceEntry> doInBackground(Void... params) {
-		//                Log.d(TAG, "Refreshing device list ...");
-		//                SystemClock.sleep(1000);
-		//                final List<DeviceEntry> result = new ArrayList<DeviceEntry>();
-		//                for (final UsbDevice device : mUsbManager.getDeviceList().values()) {
-		//                    final List<UsbSerialDriver> drivers =
-		//                            UsbSerialProber.probeSingleDevice(mUsbManager, device);
-		//                    Log.d(TAG, "Found usb device: " + device);
-		//                    if (drivers.isEmpty()) {
-		//                        Log.d(TAG, "  - No UsbSerialDriver available.");
-		//                        result.add(new DeviceEntry(device, null));
-		//                    } else {
-		//                        for (UsbSerialDriver driver : drivers) {
-		//                            Log.d(TAG, "  + " + driver);
-		//                            result.add(new DeviceEntry(device, driver));
-		//                            mDriver = driver;
-		//                        }
-		//                    }
-		//                }
-		//                return result;
-		//            }
-		//
-		//            @Override
-		//            protected void onPostExecute(List<DeviceEntry> result) {
-		//            	if (mDriver == null) {
-		//            		setStatus(CardStatus.NONE);
-		//            		stopIoManager();
-		//            	}
-		//            	else if (sDriver == null) {
-		//            		mHandler.removeMessages(MESSAGE_REFRESH);
-		//            		sDriver = mDriver;
-		//            		startIoManager();
-		//            		setStatus(CardStatus.OK);
-		//            	}
-		//            }
-		//
-		//        }.execute((Void) null);
 
 		UsbSerialDriver driver = UsbSerialProber.findFirstDevice(mUsbManager);
 		if (driver != null && sDriver == null) {

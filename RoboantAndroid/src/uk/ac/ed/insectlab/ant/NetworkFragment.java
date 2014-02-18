@@ -125,9 +125,6 @@ public class NetworkFragment extends CardFragment {
 
 				@Override
 				public void disconnected() {
-					//					Log.i(TAG, "Disconnected");
-					
-
 					getActivity().runOnUiThread(new Runnable() {
 
 						@Override
@@ -138,8 +135,6 @@ public class NetworkFragment extends CardFragment {
 						}
 					});
 					mNetworkListener.serverDisconnected();
-					
-//					postConnectorRunnable();
 				}
 
 
@@ -170,7 +165,7 @@ public class NetworkFragment extends CardFragment {
 			super.onProgressUpdate(values);
 			handleMessage(values[0]);
 		}
-		
+
 		@Override
 		protected void onPostExecute(TcpClient result) {
 			super.onPostExecute(result);
@@ -205,70 +200,9 @@ public class NetworkFragment extends CardFragment {
 		if (matcher.find()) {
 			int speedL = Integer.parseInt(matcher.group(1));
 			int speedR = Integer.parseInt(matcher.group(2));
-			
+
 			mNetworkListener.speedReceivedFromNetwork(speedL, speedR);
-			////			if (mAIControl != null) {
-			////				return;
-			////			}
-			////			if (mRoboAntControl == null) {
-			////				Log.i(TAG, "mRoboAntControl is null message is " + message);
-			////				return;
-			////			}
-//			if (matcher.group(1).equals("l")) {
-//				//				mRoboAntControl.setLeftSpeed(speed);
-//				mNetworkListener.speedReceivedFromNetwork(speed, 0);
-//			}
-//			else {
-//				//				mRoboAntControl.setRightSpeed(speed);
-//				mNetworkListener.speedReceivedFromNetwork(0, speed);
-//			}
 		}
-		//		else if (message.startsWith("cam")) {
-		//			Log.i(TAG, "cam message!");
-		//			if (mCamMessageRecievedAt + CAMERA_TIMEOUT > System.currentTimeMillis()) {
-		//				Log.i(TAG, "ignoring cam message");
-		//				return;
-		//			}
-		//			mCamMessageRecievedAt = System.currentTimeMillis();
-		//		}
-		//		else if (message.startsWith("ai")) {
-		//			Log.i(TAG, "ai message!");
-		//			toggleAI();
-		//
-		//		}
-		//		else if (message.startsWith("pic")) {
-		//			Log.i(TAG, "pic message!");
-		//			takePicture();
-		//		}
-		//		else if (message.startsWith("rec")) {
-		//			Log.i(TAG, "rec message!");
-		//			if (!mRecordingRoute) {
-		//				postRecordingRunnable();
-		//				mRecordingRoute = true;
-		//				mRecordingText.setVisibility(View.VISIBLE);
-		//			}
-		//			else {
-		//				mRecordingRoute = false;
-		//				handler.removeCallbacks(mRecordingRunnable);
-		//				synchronized (mRoutePictures) {
-		//					new SaveRecordedRouteTask(this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoutePictures);
-		//				}
-		//				mRecordingText.setVisibility(View.INVISIBLE);
-		//			}
-		//		}
-		//		else if (message.startsWith("calibrate")) {
-		//			Log.i(TAG, "Calibrate message");
-		//			//			if (mRoboAntControl != null) {
-		//			//				mRoboAntControl.calibrate();
-		//			//			}
-		//
-		//			calibrateSSD();
-		//		}
-		//		else if (message.startsWith("go")) {
-		//			if (mAIControl != null) {
-		//				mAIControl.releaseLock();
-		//			}
-		//		}
 	}
 
 	@Override
@@ -281,12 +215,14 @@ public class NetworkFragment extends CardFragment {
 	public void onPause() {
 		if (mTcpClient != null) {
 			mTcpClient.stopClient();
+			mTcpClient = null;
 		}
 		if (mConnectorRunnable != null) {
 			mHandler.removeCallbacks(mConnectorRunnable);
 		}
 		if (mConnectTask != null) {
 			mConnectTask.cancel(true);
+			mConnectTask = null;
 		}
 		super.onPause();
 	}

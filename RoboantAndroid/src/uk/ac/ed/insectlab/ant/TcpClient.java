@@ -20,17 +20,10 @@ public class TcpClient implements NetworkControl {
 
 	private static final int KEEP_ALIVE_INTERVAL = 10000;
 	private static final String TAG = "TcpClient";
-	//    public static final String SERVER_IP = "192.168.0.100"; //your computer IP address
-	//    public static final int SERVER_PORT = 4444;
-	// message to send to the server
 	private String mServerMessage;
-	// sends message received notifications
 	private OnMessageReceived mMessageListener = null;
-	// while this is true, the server will continue running
 	private boolean mRun = false;
-	// used to send messages
 	private PrintWriter mBufferOut;
-	// used to read messages from the server
 	private BufferedReader mBufferIn;
 	private long mLastKeepAlive;
 	private boolean mStopped;
@@ -43,19 +36,12 @@ public class TcpClient implements NetworkControl {
 
 	private Object mSendingLock = new Object();
 	private boolean mSendingPicture;
+	private boolean mCrashed;
 
-	/**
-	 * Constructor of the class. OnMessagedReceived listens for the messages received from server
-	 */
 	public TcpClient(OnMessageReceived listener) {
 		mMessageListener = listener;
 	}
 
-	/**
-	 * Sends the message entered by client to the server
-	 *
-	 * @param message text entered by client
-	 */
 	public void sendMessage(final String message) {
 		synchronized (mSendingLock) {
 
@@ -64,27 +50,6 @@ public class TcpClient implements NetworkControl {
 				if (mBufferOut != null && !mBufferOut.checkError()) {
 					mBufferOut.println(message);
 					mBufferOut.flush();
-					if (message.startsWith(NetworkControl.NEW_LOOK_AROUND)) {
-						mSendingBlock = true;
-						Log.i(TAG, "Block sending");
-						mSendingQueue.addFirst(new Runnable() {
-
-							@Override
-							public void run() {
-								// dummy to prevent sending for a while;
-							}
-						});
-						mHandler.postDelayed(new Runnable() {
-
-							@Override
-							public void run() {
-								// give some time for NEW_LOOK_AROUND MESSAGE to arrive 
-								Log.i(TAG, "Unblock sending");
-								mSendingQueue.removeFirst();
-								mSendingBlock = false;
-							}
-						}, 2000);
-					}
 				}
 			}
 			else {
@@ -100,12 +65,8 @@ public class TcpClient implements NetworkControl {
 		}
 	}
 
-	/**
-	 * Close the connection and release the members
-	 */
 	public void stopClient() {
 
-		// send mesage that we are closing the connection
 		_sendMessage(Constants.CLOSED_CONNECTION);
 		mStopped = true;
 
@@ -116,7 +77,6 @@ public class TcpClient implements NetworkControl {
 			mBufferOut.close();
 		}
 
-		//        mMessageListener = null;
 		mBufferIn = null;
 		mBufferOut = null;
 		mServerMessage = null;
@@ -146,10 +106,8 @@ public class TcpClient implements NetworkControl {
 		};
 
 		try {
-			//here you must put your computer's IP address.
 			InetAddress serverAddr = InetAddress.getByName(serverip);
 
-			//create a socket to make the connection with the server
 			Socket socket = new Socket(serverAddr, serverport);
 			socket.setSoTimeout(1000);
 
@@ -157,18 +115,13 @@ public class TcpClient implements NetworkControl {
 				mMessageListener.connected();
 				mLastKeepAlive = System.currentTimeMillis();
 
-				//sends the message to the server
 				mOutputStream = socket.getOutputStream();
 				mBufferOut = new PrintWriter(new BufferedWriter(new OutputStreamWriter(mOutputStream)), true);
 
-				//receives the message which the server sends back
 				mBufferIn = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-				// send login name
 				_sendMessage(Constants.LOGIN_NAME);
 
-				//in this while the client listens for the messages sent by the server
 				while (mRun) {
-					//					mHandler.post(executeQueueFront);
 					executeQueueFront.run();
 
 					if (mLastKeepAlive + KEEP_ALIVE_INTERVAL < System.currentTimeMillis()) {
@@ -206,7 +159,6 @@ public class TcpClient implements NetworkControl {
 					}
 
 					if (mServerMessage != null && mMessageListener != null) {
-						//call the method messageReceived from MyActivity class
 						mMessageListener.messageReceived(mServerMessage);
 					}
 
@@ -214,31 +166,27 @@ public class TcpClient implements NetworkControl {
 
 
 			} catch (IOException e) {
+				
+				mCrashed = true;
 
 				if (!mStopped) {
 					mMessageListener.disconnected();
 				}
 
 			} finally {
-				//the socket must be closed. It is not possible to reconnect to this socket
-				// after it is closed, which means a new socket instance has to be created.
 				socket.close();
+				if (!mCrashed && !mStopped) {
+					mMessageListener.disconnected();
+				}
 
 			}
 
 		} catch (Exception e) {
 
-			//        	Log.e("TCP", "Connection error");
-			//			if (!mStopped) {
-			//				mMessageListener.disconnected();
-			//			}
-
 		}
 
 	}
 
-	//Declare the interface. The method messageReceived(String message) will must be implemented in the MyActivity
-	//class at on asynckTask doInBackground
 	public interface OnMessageReceived {
 		public void messageReceived(String message);
 
@@ -277,27 +225,6 @@ public class TcpClient implements NetworkControl {
 		synchronized (mSendingLock) {
 
 			if (mBufferOut != null && !mBufferOut.checkError()) {
-				if (message.startsWith(NetworkControl.NEW_LOOK_AROUND)) {
-					mSendingBlock = true;
-					Log.i(TAG, "Block sending");
-					mSendingQueue.addFirst(new Runnable() {
-
-						@Override
-						public void run() {
-							// dummy to prevent sending for a while;
-						}
-					});
-					mHandler.postDelayed(new Runnable() {
-
-						@Override
-						public void run() {
-							// give some time for NEW_LOOK_AROUND MESSAGE to arrive 
-							Log.i(TAG, "Unblock sending");
-							mSendingQueue.removeFirst();
-							mSendingBlock = false;
-						}
-					}, 2000);
-				}
 				mBufferOut.println(message);
 				mBufferOut.flush();
 			}

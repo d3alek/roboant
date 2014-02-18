@@ -12,7 +12,6 @@ public class GLOBAL extends Application {
 	private static Settings mSettings;
 
 	public static Semaphore PICTURE_MUTEX = new Semaphore(0);
-//	public static synchronized Bitmap PICTURE_STORAGE;
 	public static Bitmap PICTURE_STORAGE;
 	
 	@Override

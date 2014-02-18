@@ -12,45 +12,43 @@ class MotorTestTask extends AsyncTask<ArduinoZumoControl, Void, Void> {
 
         for (int speed = 0; speed <= 400; speed++)
         {
-            mRoboAntControl.setLeftSpeed(speed);
+            mRoboAntControl.setSpeeds(speed, 0);
 
         }
 
         for (int speed = 400; speed >= 0; speed--)
         {
-            mRoboAntControl.setLeftSpeed(speed);
+            mRoboAntControl.setSpeeds(speed, 0);
         }
-
-        // run left motor backward
 
         for (int speed = 0; speed >= -400; speed--)
         {
-            mRoboAntControl.setLeftSpeed(speed);
+            mRoboAntControl.setSpeeds(speed, 0);
         }
 
         for (int speed = -400; speed <= 0; speed++)
         {
-            mRoboAntControl.setLeftSpeed(speed);
+            mRoboAntControl.setSpeeds(speed, 0);
         }
 
         for (int speed = 0; speed <= 400; speed++)
         {
-            mRoboAntControl.setRightSpeed(speed);
+            mRoboAntControl.setSpeeds(0, speed);
         }
 
         for (int speed = 400; speed >= 0; speed--)
         {
-            mRoboAntControl.setRightSpeed(speed);
+            mRoboAntControl.setSpeeds(0, speed);
         }
 
         for (int speed = 0; speed >= -400; speed--)
         {
-            mRoboAntControl.setRightSpeed(speed);
+            mRoboAntControl.setSpeeds(0, speed);
         }
 
         for (int speed = -400; speed <= 0; speed++)
         {
-            mRoboAntControl.setRightSpeed(speed);
+            mRoboAntControl.setSpeeds(0, speed);
         }
 
         return null;

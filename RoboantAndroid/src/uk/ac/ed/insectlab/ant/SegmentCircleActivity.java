@@ -1,17 +1,11 @@
 package uk.ac.ed.insectlab.ant;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.LoaderCallbackInterface;
-
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.app.FragmentManager;
-import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
