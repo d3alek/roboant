@@ -9,6 +9,7 @@ import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint3f;
 import org.opencv.core.Point;
@@ -79,6 +80,10 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 	private Size mLensCropSize;
 
+	private Mat mRgbaMasked;
+
+	private Mat mCircleMat;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -140,20 +145,20 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 		mOpenCvCameraView.setCvCameraViewListener(this);
 
-//		mSegmentCircle = (Button)view.findViewById(R.id.btn_segment_circle);
-//
-//		if (mShowSegmentButton) {
-//			mSegmentCircle.setOnClickListener(new View.OnClickListener() {
-//				@Override
-//				public void onClick(View v) {
-//					Intent i = new Intent(getActivity(), SegmentCircleActivity.class);
-//					startActivityForResult(i, REQ_SEGMENT_CIRCLE);
-//				}
-//			});
-//		}
-//		else {
-//			mSegmentCircle.setVisibility(View.GONE);
-//		}
+		//		mSegmentCircle = (Button)view.findViewById(R.id.btn_segment_circle);
+		//
+		//		if (mShowSegmentButton) {
+		//			mSegmentCircle.setOnClickListener(new View.OnClickListener() {
+		//				@Override
+		//				public void onClick(View v) {
+		//					Intent i = new Intent(getActivity(), SegmentCircleActivity.class);
+		//					startActivityForResult(i, REQ_SEGMENT_CIRCLE);
+		//				}
+		//			});
+		//		}
+		//		else {
+		//			mSegmentCircle.setVisibility(View.GONE);
+		//		}
 
 		setLabel("Camera");
 
@@ -221,10 +226,14 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		mRgbaSmall = new Mat();
 		mRgbaCropped = new Mat();
 		mRgbaZoomed = new Mat();
-		
+		mRgbaMasked = new Mat();
+
 		loadLens();
 		if (mLensFound) {
 			mSegmenting = true;
+			mCircleMat = Mat.zeros(height, width, CvType.CV_8UC4);
+			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), (int)mLens.radius, 
+					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
 		}
 	}
 
@@ -261,43 +270,33 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 					int min = Math.min(mWidth, mHeight);
 					mLensCropSize = new Size(min, min);
 					mOpenCvCameraView.setCrop(min, min);
-					
+
 					Rect rangeRect = new Rect(mLens.x - mLens.radius,
 							mLens.y - mLens.radius, mLens.radius*2, mLens.radius*2);
 					Log.i(TAG, "rangeRect " + rangeRect.width + " " + rangeRect.height + " " + rgba.cols() + " " + rgba.rows());
 					mRgbaCropped = rgba.submat(rangeRect);
-					
+
 					Imgproc.resize(mRgbaCropped, mRgbaZoomed, mLensCropSize);
 
 					Imgproc.resize(mRgbaCropped, mRgbaSmall, new Size(mRgbaCropped.cols()/DOWNSAMPLE_RATE, mRgbaCropped.rows()/DOWNSAMPLE_RATE));
-					
+
 					return mRgbaZoomed;
 				}
 			}
 			else {
-				Mat circleMat = Mat.zeros(rgba.rows(), rgba.cols(), rgba.type());
-				Core.circle(circleMat, new Point(mLens.x, mLens.y), (int)mLens.radius, 
-						new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
+				Core.bitwise_and(mCircleMat, rgba, mRgbaMasked);
 
-				Core.bitwise_and(circleMat, rgba, rgba);
-				circleMat = new Mat();
-				
 				Rect rangeRect = new Rect(mLens.x - mLens.radius,
 						mLens.y - mLens.radius, mLens.radius*2, mLens.radius*2);
-				mRgbaCropped = rgba.submat(rangeRect);
-				
-				rgba = new Mat();
-				
+				mRgbaCropped = mRgbaMasked.submat(rangeRect);
+
 				Imgproc.resize(mRgbaCropped, mRgbaZoomed, mLensCropSize);
 
-				mRgbaCropped = new Mat();
-//				Imgproc.resize(mRgbaCropped, mRgbaSmall, new Size(mRgbaCropped.cols()/DOWNSAMPLE_RATE, mRgbaCropped.rows()/DOWNSAMPLE_RATE));
-				
 				return mRgbaZoomed;
 			}
-			
+
 		}
-		
+
 
 		return rgba;
 	}

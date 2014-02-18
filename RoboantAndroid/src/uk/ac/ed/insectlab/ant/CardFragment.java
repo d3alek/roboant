@@ -2,15 +2,16 @@ package uk.ac.ed.insectlab.ant;
 
 import uk.co.ed.insectlab.ant.R;
 import android.app.Fragment;
+import android.content.ClipData;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.View.DragShadowBuilder;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.RelativeLayout.LayoutParams;
+import android.widget.TextView;
 
 public class CardFragment extends Fragment {
 
@@ -34,7 +35,7 @@ public class CardFragment extends Fragment {
 	}
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container,
+	public View onCreateView(LayoutInflater inflater, final ViewGroup container,
 			Bundle savedInstanceState) {
 		RelativeLayout view = (RelativeLayout)inflater.inflate(R.layout.fragment_card, container, false);
 
@@ -52,6 +53,21 @@ public class CardFragment extends Fragment {
 		if (cardView != null) {
 			view.addView(cardView, mCardViewParams);
 		}
+		
+//		final int childCount = container.getChildCount();
+		
+		view.setOnLongClickListener(new View.OnLongClickListener() {
+
+			@Override
+			public boolean onLongClick(View v) {
+				View.DragShadowBuilder myShadow = new DragShadowBuilder(v);
+				ClipData.Item item = new ClipData.Item(container.getChildCount() + "");
+				ClipData dragData = new ClipData("labelblaa", new String[] {}, item);
+				v.startDrag(dragData, myShadow, null, 0);
+				return true;
+			}
+			
+		});
 
 		return view;
 	}

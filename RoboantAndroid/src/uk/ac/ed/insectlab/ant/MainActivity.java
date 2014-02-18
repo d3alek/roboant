@@ -21,15 +21,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
-
-import com.google.zxing.integration.android.IntentIntegrator;
-import com.google.zxing.integration.android.IntentResult;
+import android.view.WindowManager;
 
 public class MainActivity extends Activity implements NetworkListener,
-	SerialListener, ManualControlListener, CameraListener {
+SerialListener, ManualControlListener, CameraListener {
 
 	private static final int CAMERA_NUMBER = 1;
 
@@ -44,7 +39,7 @@ public class MainActivity extends Activity implements NetworkListener,
 	private NetworkFragment mNetworkFragment;
 
 	private SerialFragment mSerialFragment;
-	
+
 	BroadcastReceiver mUsbDisconnectedReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
@@ -59,7 +54,7 @@ public class MainActivity extends Activity implements NetworkListener,
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		//		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 		//		final PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
 		//		this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "My Tag");
 		//		this.mWakeLock.acquire();
@@ -69,15 +64,15 @@ public class MainActivity extends Activity implements NetworkListener,
 
 		mNetworkFragment = new NetworkFragment();
 		mSerialFragment = new SerialFragment();
-		
+
 
 		transaction.add(R.id.fragment_container, mNetworkFragment);
 		transaction.add(R.id.fragment_container, mSerialFragment);
-//		transaction.add(R.id.fragment_container, new CameraFragment());
+		transaction.add(R.id.fragment_container, new CameraFragment());
 
 		transaction.commit();
 	}
-	
+
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		super.onActivityResult(requestCode, resultCode, data);
@@ -146,9 +141,9 @@ public class MainActivity extends Activity implements NetworkListener,
 		mManualControlFragment = new ManualControlFragment();
 		getFragmentManager().beginTransaction()
 		.add(R.id.fragment_container, mManualControlFragment).commit();
-		
+
 		IntentFilter intentFilter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
-		
+
 		registerReceiver(mUsbDisconnectedReceiver, intentFilter);
 	}
 
@@ -172,19 +167,19 @@ public class MainActivity extends Activity implements NetworkListener,
 	@Override
 	public void cameraViewStarted(int width, int height) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void cameraViewStopped() {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void onLensFound(boolean b) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 }

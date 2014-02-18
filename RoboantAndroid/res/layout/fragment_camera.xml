@@ -8,11 +8,11 @@
 
     <uk.ac.ed.insectlab.ant.CroppableCameraView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
         android:visibility="gone"
         android:id="@+id/camera_preview"
-        opencv:show_fps="true"
-        opencv:camera_id="front" />
+        opencv:show_fps="false"
+        opencv:camera_id="front"
+        android:layout_height="240dp"/>
 
 <!--     <Button  -->
 <!--         android:id="@+id/btn_segment_circle" -->
