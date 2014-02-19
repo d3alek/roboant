@@ -1,9 +1,7 @@
 RoboAnt
 =======
 
-Autonomous robot made from Android phone + Arduino + Zumo Shield
-
-Includes Android app, Arduino sketch and Python server.
+Autonomous robot made from Android phone + Arduino + Zumo Shield. Includes Android app, Arduino sketch and Python server.
 
 Useful links
 ------------
