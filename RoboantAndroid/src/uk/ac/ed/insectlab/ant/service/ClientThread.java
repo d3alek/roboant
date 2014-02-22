@@ -104,6 +104,9 @@ public class ClientThread extends Thread {
 		if (mState == State.CONNECTED) {
 			mListener.serverConnected(mTcpClient);
 		}
+		else {
+			mListener.serverDisconnected();
+		}
 	}
 
 	public Spanned getDescription() {

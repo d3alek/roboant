@@ -50,7 +50,7 @@ public class SerialThread extends Thread {
 	private static UsbManager mUsbManager;
 
 	private static ArduinoZumoControl mRoboAntControl;
-	
+
 	private static Object lock = new Object();
 
 	private final static SerialInputOutputManager.Listener mIOManagerListener =
@@ -147,7 +147,7 @@ public class SerialThread extends Thread {
 
 	public void usbDisconnectedIntentReceived() {
 		stopIoManager();
-		
+
 		mState = SerialState.DRIVER_SEARCH;
 	}
 
@@ -172,7 +172,7 @@ public class SerialThread extends Thread {
 					e.printStackTrace();
 				}
 			}
-			
+
 			if (!mRunning) {
 				return;
 			}
@@ -202,6 +202,9 @@ public class SerialThread extends Thread {
 			int left = Integer.parseInt(matcher.group(1));
 			int right = Integer.parseInt(matcher.group(2));
 			mSerialListener.deviceSpeedsReceived(left, right);
+			if (mListener != null) {
+				mListener.serialHeartbeat(left, right);
+			}
 			messageBuffer = null;
 		}
 		else {
@@ -222,8 +225,11 @@ public class SerialThread extends Thread {
 		if (mState == SerialState.CONNECTED) {
 			mListener.serialConnected(mRoboAntControl);
 		}
+		else {
+			mListener.serialDisconnected();
+		}
 	}
-	
+
 	public Spanned getDescription() {
 		String str = "<b>Serial</b> ";
 		String status;

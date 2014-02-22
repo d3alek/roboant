@@ -34,6 +34,8 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 
 		void serialConnected(ArduinoZumoControl roboantControl);
 
+		void serialHeartbeat(int left, int right);
+
 	}
 
 	public interface NetworkBond {
@@ -41,8 +43,6 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		void serverConnected(TcpClient tcpClient);
 
 		void serverDisconnected();
-
-//		void receivedSpeedFromServer(int speedL, int speedR);
 
 	}
 
@@ -52,7 +52,6 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 			mSerialThread.usbDisconnectedIntentReceived();
 		}
 	};
-	private boolean mStopping;
 
 	@Override
 	public void onCreate() {
@@ -85,7 +84,7 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		Intent dismissIntent = new Intent(this, RoboantService.class);
 		dismissIntent.setAction(ACTION_DISMISS);
 		PendingIntent piDismiss = PendingIntent.getService(this, 0, dismissIntent, 0);
-		mBuilder.addAction(android.R.drawable.ic_delete, "Close", piDismiss);
+		mBuilder.addAction(android.R.drawable.ic_delete, "Terminate", piDismiss);
 		
 		inboxStyle.addLine(mSerialThread.getDescription());
 		inboxStyle.addLine(mClientThread.getDescription());
@@ -106,8 +105,6 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
-		
 		if (intent != null) {
 			String action = intent.getAction();
 			if (action == null) {
