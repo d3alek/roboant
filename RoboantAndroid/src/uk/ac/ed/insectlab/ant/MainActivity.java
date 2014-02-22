@@ -1,7 +1,6 @@
 package uk.ac.ed.insectlab.ant;
 
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
-import uk.ac.ed.insectlab.ant.ManualControlFragment.ManualControlListener;
 import uk.ac.ed.insectlab.ant.NetworkFragment.NetworkFragmentListener;
 import uk.ac.ed.insectlab.ant.SerialFragment.SerialFragmentListener;
 import uk.ac.ed.insectlab.ant.service.RoboantService;
@@ -18,22 +17,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager.WakeLock;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
 public class MainActivity extends Activity implements NetworkFragmentListener, SerialFragmentListener,
-ManualControlListener, CameraListener {
+CameraListener {
 
 	private static final int CAMERA_NUMBER = 1;
 
 	private final String TAG = MainActivity.class.getSimpleName();
 
 	private WakeLock mWakeLock;
-
-	private ManualControlFragment mManualControlFragment;
 
 	private NetworkFragment mNetworkFragment;
 
@@ -137,14 +133,6 @@ ManualControlListener, CameraListener {
 		super.onStop();
 		if (mBound) {
 			unbindService(mConnection);
-		}
-	}
-
-	@Override
-	public void setManualSpeeds(int left, int right) {
-		Log.i(TAG, "manualSpeeds " + left + " " + right);
-		if (mSerialFragment != null) {
-			mSerialFragment.setSpeeds(left, right);
 		}
 	}
 
