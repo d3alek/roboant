@@ -1,7 +1,6 @@
-package uk.ac.ed.insectlab.ant;
+package uk.ac.ed.insectlab.ant.service;
 
-import android.os.Handler;
-import android.os.HandlerThread;
+import uk.ac.ed.insectlab.ant.ArduinoZumoControl;
 import android.util.Log;
 
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
@@ -14,19 +13,19 @@ public class RoboAntControl implements ArduinoZumoControl {
 	private static final long WRITE_INTERVAL = 25; // min 25
 	private static final String TAG = "RoboAntControl";
 
-	private HandlerThread mHandlerThread;
+//	private HandlerThread mHandlerThread;
 
-	private Handler mHandler;
+//	private Handler mHandler;
 
 	int TURN_SPEED = 80;
 
 	public RoboAntControl(SerialInputOutputManager sm) {
 		mSerialIoManager = sm;
-		mHandlerThread = new HandlerThread("ai_control_handler");
-		mHandlerThread.start();
+//		mHandlerThread = new HandlerThread("ai_control_handler");
+//		mHandlerThread.start();
 
-		while(!mHandlerThread.isAlive()) {};  
-		mHandler = new Handler(mHandlerThread.getLooper(), null);
+//		while(!mHandlerThread.isAlive()) {};  
+//		mHandler = new Handler(mHandlerThread.getLooper(), null);
 	}
 
 	private synchronized void sendSpeeds() {

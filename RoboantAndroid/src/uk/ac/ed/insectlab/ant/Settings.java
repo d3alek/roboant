@@ -64,10 +64,10 @@ public class Settings {
 		e.apply();
 	}
 
-	public void setServerAddress(String ip, String port) {
+	public void setServerAddress(String ip, int port) {
 		Editor e = mPrefs.edit();
 		e.putString(KEY_SERVER_IP, ip);
-		e.putInt(KEY_SERVER_PORT, Integer.parseInt(port));
+		e.putInt(KEY_SERVER_PORT, port);
 		e.apply();
 	}
 	

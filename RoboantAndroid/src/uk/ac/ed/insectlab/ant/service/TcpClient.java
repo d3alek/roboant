@@ -1,4 +1,4 @@
-package uk.ac.ed.insectlab.ant;
+package uk.ac.ed.insectlab.ant.service;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -12,8 +12,12 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.LinkedList;
 
+import uk.ac.ed.insectlab.ant.Constants;
+import uk.ac.ed.insectlab.ant.NetworkControl;
+import uk.ac.ed.insectlab.ant.RoboPicture;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 public class TcpClient implements NetworkControl {
@@ -108,6 +112,8 @@ public class TcpClient implements NetworkControl {
 		try {
 			InetAddress serverAddr = InetAddress.getByName(serverip);
 
+			Log.i(TAG, "Creating socket");
+
 			Socket socket = new Socket(serverAddr, serverport);
 			socket.setSoTimeout(1000);
 
@@ -161,7 +167,7 @@ public class TcpClient implements NetworkControl {
 					if (mServerMessage != null && mMessageListener != null) {
 						mMessageListener.messageReceived(mServerMessage);
 					}
-
+					
 				}
 
 

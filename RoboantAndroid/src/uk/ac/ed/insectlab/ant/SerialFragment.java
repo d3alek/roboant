@@ -1,123 +1,29 @@
 package uk.ac.ed.insectlab.ant;
 
-import java.io.IOException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import uk.ac.ed.insectlab.ant.service.RoboantService.SerialBond;
 import android.app.Activity;
-import android.content.Context;
-import android.hardware.usb.UsbManager;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.hoho.android.usbserial.driver.UsbSerialDriver;
-import com.hoho.android.usbserial.driver.UsbSerialProber;
-import com.hoho.android.usbserial.util.SerialInputOutputManager;
-
-public class SerialFragment extends CardFragment {
+public class SerialFragment extends CardFragment implements SerialBond {
 
 	private static final String TAG = SerialFragment.class.getSimpleName();
 
-	private static final int MESSAGE_REFRESH = 42;
-	private static final long REFRESH_TIMEOUT_MILLIS = 5000;
-
-	interface SerialListener {
+	interface SerialFragmentListener {
 		void deviceSpeedsReceived(int left, int right);
-
 		void onSerialConnected();
-
 		void onSerialDisconnected();
 	}
 
-
-	private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
-
-	private final Handler mHandler = new Handler() {
-		@Override
-		public void handleMessage(Message msg) {
-			switch (msg.what) {
-			case MESSAGE_REFRESH:
-				Log.i(TAG, "Refresh message received");
-				if (sDriver == null) {
-					refreshDeviceList();
-					mHandler.sendEmptyMessageDelayed(MESSAGE_REFRESH, REFRESH_TIMEOUT_MILLIS);
-				}
-				break;
-			default:
-				super.handleMessage(msg);
-				break;
-			}
-		}
-	};
-
-	//    /** Simple container for a UsbDevice and its driver. */
-	//    private static class DeviceEntry {
-	//        public UsbDevice device;
-	//        public UsbSerialDriver driver;
-	//
-	//        DeviceEntry(UsbDevice device, UsbSerialDriver driver) {
-	//            this.device = device;
-	//            this.driver = driver;
-	//        }
-	//    }
-
-	private String messageBuffer;
-	private Pattern mSpeedPattern = Pattern.compile("l(-?\\d+)r(-?\\d+)");
-
-	private UsbSerialDriver sDriver = null;
-	private SerialInputOutputManager mSerialIoManager;
-	private final SerialInputOutputManager.Listener mIOManagerListener =
-			new SerialInputOutputManager.Listener() {
-
-		@Override
-		public void onRunError(Exception e) {
-			Log.d(TAG, "Runner stopped.");
-			setStatus(CardStatus.ERROR);
-		}
-
-		@Override
-		public void onNewData(final byte[] data) {
-			updateReceivedData(data);
-			//			MainActivity.this.runOnUiThread(new Runnable() {
-			//				@Override
-			//				public void run() {
-			//					MainActivity.this.updateReceivedData(data);
-			//				}
-			//			});
-		}
-	};
-
-	private UsbManager mUsbManager;
-
-	private SerialListener mSerialListener;
-
-	private ArduinoZumoControl mRoboAntControl;
-
-	private class DummyArduinoZumoControl implements ArduinoZumoControl {
-
-		@Override
-		public void setSpeeds(int turnSpeed, int i) {
-			Log.i(TAG, "Dummy setSpeeds");
-		}
-
-		@Override
-		public void simpleTurnInPlaceBlocking(int i, int turnTime) {
-			Log.i(TAG, "Dummy simpleTurnInPlaceBlocking");
-
-		}
-	}
+	private ArduinoZumoControl mRoboant;
+	private SerialFragmentListener mSerialListener;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mRoboAntControl = new DummyArduinoZumoControl();
 	}
 
 
@@ -125,13 +31,11 @@ public class SerialFragment extends CardFragment {
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
 		try {
-			mSerialListener = (SerialListener)activity;
+			mSerialListener = (SerialFragmentListener)activity;
 		} catch(ClassCastException e) {
 			e.printStackTrace();
 			throw new RuntimeException("Host activity does not implement listener");
 		}
-
-		mUsbManager = (UsbManager) activity.getSystemService(Context.USB_SERVICE);
 	}
 
 
@@ -149,127 +53,36 @@ public class SerialFragment extends CardFragment {
 		setLabel("Serial");
 	}
 
-	private void refreshDeviceList() {
-		setStatus(CardStatus.LOADING);
-
-		UsbSerialDriver driver = UsbSerialProber.findFirstDevice(mUsbManager);
-		if (driver != null && sDriver == null) {
-			sDriver = driver;
-			mHandler.removeMessages(MESSAGE_REFRESH);
-			openDriver();
-			startIoManager();
-			setStatus(CardStatus.OK);
-		}
-	}
-
-	private void stopIoManager() {
-		if (mSerialIoManager != null) {
-			Log.i(TAG, "Stopping io manager ..");
-			setSpeeds(0, 0);
-			mSerialIoManager.stop();
-			mSerialIoManager = null;
-			mSerialListener.onSerialDisconnected();
-		}
-	}
-
-	private void startIoManager() {
-		if (sDriver != null) {
-			Log.i(TAG, "Starting io manager ..");
-			mSerialIoManager = new SerialInputOutputManager(sDriver, mIOManagerListener);
-			mExecutor.submit(mSerialIoManager);
-			mSerialListener.onSerialConnected();
-			mRoboAntControl = new RoboAntControl(mSerialIoManager);
-			setStatus(CardStatus.OK);
-		}
-	}
-
-	private void onDeviceStateChange() {
-		stopIoManager();
-		startIoManager();
-	}
-
-	private void updateReceivedData(byte[] data) {
-		String message = new String(data);
-		if (messageBuffer != null) {
-			message = messageBuffer + message;
-		}
-		Log.i(TAG, "Message from serial: " + message);
-		Matcher matcher = mSpeedPattern.matcher(message);
-		if (matcher.find()) {
-			int left = Integer.parseInt(matcher.group(1));
-			int right = Integer.parseInt(matcher.group(2));
-			mSerialListener.deviceSpeedsReceived(left, right);
-			messageBuffer = null;
-		}
-		else {
-			messageBuffer = message;
-		}
-	}
 
 	@Override
 	public void onResume() {
 		super.onResume();
-		Log.d(TAG, "Resumed, sDriver=" + sDriver);
-		if (sDriver == null) {
-			Log.i(TAG, "No serial device");
-			mHandler.sendEmptyMessage(MESSAGE_REFRESH);
-		} else {
-			openDriver();
-		}
-		onDeviceStateChange();
 	}
 
-	private void openDriver() {
-		try {
-			sDriver.open();
-			sDriver.setParameters(115200, 8, UsbSerialDriver.STOPBITS_1, UsbSerialDriver.PARITY_NONE);
-		} catch (IOException e) {
-			Log.e(TAG, "Error setting up device: " + e.getMessage(), e);
-			Log.i(TAG, "Error opening serial device");
-			try {
-				sDriver.close();
-			} catch (IOException e2) {
-				// Ignore.
-			}
-			sDriver = null;
-			mHandler.sendEmptyMessage(MESSAGE_REFRESH);
-			return;
+	@Override
+	public void onPause() {
+		super.onPause();
+	}
+
+	public void setSpeeds(int left, int right) {
+		if (mRoboant != null) {
+			mRoboant.setSpeeds(left, right);
 		}
+		else {
+			Log.e(TAG, "setSpeeds service is null");
+		}
+	}
+
+	@Override
+	public void serialDisconnected() {
+		mRoboant = null;
+		setStatus(CardStatus.LOADING);
 	}
 
 
 	@Override
-	public void onPause() {
-		mHandler.removeMessages(MESSAGE_REFRESH);
-		stopIoManager();
-		if (sDriver != null) {
-			try {
-				sDriver.close();
-			} catch (IOException e) {
-				// Ignore.
-			}
-			sDriver = null;
-		}
-
-		super.onPause();
-	}
-
-
-	public void setSpeeds(int left, int right) {
-		mRoboAntControl.setSpeeds(left, right);
-	}
-
-
-	public void usbDisconnectedIntentReceived() {
-		stopIoManager();
-		if (sDriver != null) {
-			try {
-				sDriver.close();
-			} catch (IOException e) {
-				// Ignore.
-			}
-			sDriver = null;
-		}
-		mHandler.sendEmptyMessageDelayed(MESSAGE_REFRESH, REFRESH_TIMEOUT_MILLIS);
+	public void serialConnected(ArduinoZumoControl roboantControl) {
+		mRoboant = roboantControl;
+		setStatus(CardStatus.OK);
 	}
 }

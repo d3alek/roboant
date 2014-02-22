@@ -10,9 +10,9 @@ public class RoboPicture {
 		GoTowards, LookAround;
 	}
 	
-	byte[] data;
-	PictureType type;
-	int pictureNum = -1;
+	public byte[] data;
+	public PictureType type;
+	public int pictureNum = -1;
 	
 	public RoboPicture(byte[] data, PictureType lookaround, int pictureNum) {
 		this.data = data; this.type = lookaround; this.pictureNum = pictureNum;

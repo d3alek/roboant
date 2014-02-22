@@ -20,7 +20,7 @@ public class GLOBAL extends Application {
 		super.onCreate();
 	}
 	
-	static synchronized Settings getSettings() {
+	public static synchronized Settings getSettings() {
 		return mSettings;
 	}
 }

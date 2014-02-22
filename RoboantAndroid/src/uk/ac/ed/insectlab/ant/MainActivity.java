@@ -1,22 +1,22 @@
 package uk.ac.ed.insectlab.ant;
 
-import java.util.regex.Pattern;
-
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.ac.ed.insectlab.ant.ManualControlFragment.ManualControlListener;
-import uk.ac.ed.insectlab.ant.NetworkFragment.NetworkListener;
-import uk.ac.ed.insectlab.ant.SerialFragment.SerialListener;
+import uk.ac.ed.insectlab.ant.NetworkFragment.NetworkFragmentListener;
+import uk.ac.ed.insectlab.ant.SerialFragment.SerialFragmentListener;
+import uk.ac.ed.insectlab.ant.service.RoboantService;
+import uk.ac.ed.insectlab.ant.service.RoboantService.LocalBinder;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
-import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.hardware.usb.UsbManager;
+import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.view.Menu;
@@ -24,14 +24,12 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class MainActivity extends Activity implements NetworkListener,
-SerialListener, ManualControlListener, CameraListener {
+public class MainActivity extends Activity implements NetworkFragmentListener, SerialFragmentListener,
+ManualControlListener, CameraListener {
 
 	private static final int CAMERA_NUMBER = 1;
 
 	private final String TAG = MainActivity.class.getSimpleName();
-
-	Pattern mPattern = Pattern.compile("(l|r)\\s(-?\\d+)");
 
 	private WakeLock mWakeLock;
 
@@ -41,16 +39,9 @@ SerialListener, ManualControlListener, CameraListener {
 
 	private SerialFragment mSerialFragment;
 
-	BroadcastReceiver mUsbDisconnectedReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			if (mSerialFragment != null) {
-				mSerialFragment.usbDisconnectedIntentReceived();
-			}
-		}
-	};
-
 	private CameraFragment mCameraFragment;
+
+	private ArduinoZumoControl mRoboantControl;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -75,7 +66,38 @@ SerialListener, ManualControlListener, CameraListener {
 		transaction.add(R.id.fragment_container, mCameraFragment);
 
 		transaction.commit();
+
+
 	}
+
+	@Override
+	protected void onStart() {
+		super.onStart();
+		Intent intent = new Intent(this, RoboantService.class);
+		startService(intent);
+
+		bindService(intent, mConnection, Context.BIND_ABOVE_CLIENT);
+	}
+
+	private ServiceConnection mConnection = new ServiceConnection() {
+
+		@Override
+		public void onServiceConnected(ComponentName className,
+				IBinder service) {
+			// We've bound to LocalService, cast the IBinder and get LocalService instance
+			LocalBinder binder = (LocalBinder) service;
+			binder.bindSerial(mSerialFragment);
+			binder.bindNetwork(mNetworkFragment);
+			mBound = true;
+		}
+
+		@Override
+		public void onServiceDisconnected(ComponentName arg0) {
+			mBound = false;
+		}
+	};
+
+	private boolean mBound;
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -113,51 +135,9 @@ SerialListener, ManualControlListener, CameraListener {
 	@Override
 	protected void onStop() {
 		super.onStop();
-	}
-
-	@Override
-	public void speedReceivedFromNetwork(int left, int right) {
-		if (mSerialFragment != null) {
-			mSerialFragment.setSpeeds(left, right);
+		if (mBound) {
+			unbindService(mConnection);
 		}
-	}
-
-	@Override
-	public void serverConnected() {
-		Log.i(TAG, "Server connected");
-	}
-
-	@Override
-	public void serverDisconnected() {
-		Log.i(TAG, "Server disconnected");
-	}
-
-	@Override
-	public void deviceSpeedsReceived(int left, int right) {
-		Log.i(TAG, "Speeds received " + left + " " + right);
-		if (mManualControlFragment != null) {
-			mManualControlFragment.setSpeeds(left, right);
-		}
-	}
-
-	@Override
-	public void onSerialConnected() {
-		mManualControlFragment = new ManualControlFragment();
-		getFragmentManager().beginTransaction()
-		.add(R.id.fragment_container, mManualControlFragment).commit();
-
-		IntentFilter intentFilter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
-
-		registerReceiver(mUsbDisconnectedReceiver, intentFilter);
-	}
-
-	@Override
-	public void onSerialDisconnected() {
-		if (mManualControlFragment != null) {
-			getFragmentManager().beginTransaction()
-			.remove(mManualControlFragment).commit();
-		}
-		unregisterReceiver(mUsbDisconnectedReceiver);
 	}
 
 	@Override
@@ -187,15 +167,33 @@ SerialListener, ManualControlListener, CameraListener {
 	}
 
 	@Override
-	public void freeCamera(Handler handler, int what) {
+	public void freeCamera(Handler handler, int cameraFree) {
 		if (mCameraFragment == null) {
-			handler.sendEmptyMessage(what);
+			handler.sendEmptyMessage(cameraFree);
 		}
 
 		else {
 			mCameraFragment.releaseCamera();
-			handler.sendEmptyMessage(what);
+			handler.sendEmptyMessage(cameraFree);
 		}
+	}
+
+	@Override
+	public void deviceSpeedsReceived(int left, int right) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onSerialConnected() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onSerialDisconnected() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

@@ -1,12 +1,10 @@
 package uk.ac.ed.insectlab.ant;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
+import uk.ac.ed.insectlab.ant.service.TcpClient;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -20,46 +18,27 @@ import android.widget.EditText;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 
-public class NetworkFragment extends CardFragment {
-	protected static final long CONNECT_ATTEMPT_PERIOD = 2000;
+public class NetworkFragment extends CardFragment implements NetworkBond {
 	protected static final String TAG = NetworkFragment.class.getSimpleName();
 	protected static final int MESSAGE_CAMERA_FREE = 0;
-	private static TcpClient mTcpClient;
 	private static Handler mHandler;
 	private EditText mServerIP;
 	private EditText mServerPort;
-	Pattern mPattern = Pattern.compile("l(-?\\d+)r(-?\\d+)");
-	NetworkListener mNetworkListener;
-	private static ConnectTask mConnectTask;
-	static class ConnectorRunnable implements Runnable {
-		private NetworkFragment mFragment;
-		public ConnectorRunnable(NetworkFragment fragment) {
-			mFragment = fragment;
-		}
-		public void run() {
-			if (mConnectTask == null) {
-				Log.i(TAG, "Trying to connect to server");
-				mConnectTask = mFragment.new ConnectTask();
-				mConnectTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			}
-			mHandler.postDelayed(this, CONNECT_ATTEMPT_PERIOD);
-		}
+
+	interface NetworkFragmentListener {
+
+		void freeCamera(Handler mHandler, int messageCameraFree);
+		
 	}
-	private static Runnable mConnectorRunnable;
-
-	interface NetworkListener {
-		void speedReceivedFromNetwork(int left, int right);
-		void serverConnected();
-		void serverDisconnected();
-
-		void freeCamera(Handler handler, int what);
-	}
-
+	
+	private NetworkFragmentListener mNetworkListener;
+	private TcpClient mTcpClient;
+	
 	@Override
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
 		try {
-			mNetworkListener = (NetworkListener)activity;
+			mNetworkListener = (NetworkFragmentListener)activity;
 		} catch(ClassCastException e) {
 			e.printStackTrace();
 			throw new RuntimeException("Host activity does not implement listener");
@@ -69,7 +48,6 @@ public class NetworkFragment extends CardFragment {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		mConnectorRunnable = new ConnectorRunnable(this);
 		mHandler = new Handler(new Handler.Callback() {
 			@Override
 			public boolean handleMessage(Message msg) {
@@ -103,7 +81,6 @@ public class NetworkFragment extends CardFragment {
 			@Override
 			public void onClick(View v) {
 				mNetworkListener.freeCamera(mHandler, MESSAGE_CAMERA_FREE);
-
 			}
 		});
 
@@ -123,120 +100,22 @@ public class NetworkFragment extends CardFragment {
 			String[] ipPort = serverAddr.split(":");
 			mServerIP.setText(ipPort[0]);
 			mServerPort.setText(ipPort[1]);
+			GLOBAL.getSettings().setServerAddress(ipPort[0], Integer.parseInt(ipPort[1]));
 		}
 		else {
 			super.onActivityResult(requestCode, resultCode, intent);
 		}
 	}
 
-	public class ConnectTask extends AsyncTask<Void, String, TcpClient> {
-
-		@Override
-		protected void onPreExecute() {
-			NetworkFragment.this.setStatus(CardStatus.LOADING);
-			Log.i(TAG, "Starting ConnectTask");
-			super.onPreExecute();
-		}
-
-		@Override
-		protected TcpClient doInBackground(Void... nothing) {
-			if (mTcpClient != null) {
-				return null;
-			}
-			//we create a TCPClient object and
-			mTcpClient = new TcpClient(new TcpClient.OnMessageReceived() {
-
-				@Override
-				//here the messageReceived method is implemented
-				public void messageReceived(String message) {
-					//this method calls the onProgressUpdate
-					publishProgress(message);
-				}
-
-				@Override
-				public void disconnected() {
-					getActivity().runOnUiThread(new Runnable() {
-
-						@Override
-						public void run() {
-							NetworkFragment.this.setStatus(CardStatus.NONE);
-							mServerIP.setEnabled(true);
-							mServerPort.setEnabled(true);
-						}
-					});
-					mNetworkListener.serverDisconnected();
-				}
-
-				@Override
-				public void connected() {
-					getActivity().runOnUiThread(new Runnable() {
-						@Override
-						public void run() {
-							NetworkFragment.this.setStatus(CardStatus.OK);
-							mServerIP.setEnabled(false);
-							mServerPort.setEnabled(false);
-						}
-					});
-					GLOBAL.getSettings().setServerAddress(mServerIP.getText().toString(),
-							mServerPort.getText().toString());
-					mNetworkListener.serverConnected();
-				}
-			});
-
-			mTcpClient.run(mServerIP.getText().toString(), Integer.parseInt(mServerPort.getText().toString()), mHandler);
-			return null;
-		}
-
-		@Override
-		protected void onProgressUpdate(String... values) {
-			super.onProgressUpdate(values);
-			handleMessage(values[0]);
-		}
-
-		@Override
-		protected void onPostExecute(TcpClient result) {
-			super.onPostExecute(result);
-			mTcpClient = null;
-			mConnectTask = null;
-		}
-
-	}
-
-	private void postConnectorRunnable() {
-		Log.i(TAG, "postConnectorRunnable");
-		mHandler.postDelayed(mConnectorRunnable, CONNECT_ATTEMPT_PERIOD);
-	}
-
-	private void handleMessage(String message) {
-		Matcher matcher = mPattern.matcher(message);
-		if (matcher.find()) {
-			int speedL = Integer.parseInt(matcher.group(1));
-			int speedR = Integer.parseInt(matcher.group(2));
-
-			mNetworkListener.speedReceivedFromNetwork(speedL, speedR);
-		}
+	@Override
+	public void serverConnected(TcpClient tcpClient) {
+		mTcpClient = tcpClient;
+		setStatus(CardStatus.OK);
 	}
 
 	@Override
-	public void onResume() {
-		super.onResume();
-		postConnectorRunnable();
+	public void serverDisconnected() {
+		mTcpClient = null;
+		setStatus(CardStatus.LOADING);
 	}
-
-	@Override
-	public void onPause() {
-		if (mTcpClient != null) {
-			mTcpClient.stopClient();
-			mTcpClient = null;
-		}
-		if (mConnectorRunnable != null) {
-			mHandler.removeCallbacks(mConnectorRunnable);
-		}
-		if (mConnectTask != null) {
-			mConnectTask.cancel(true);
-			mConnectTask = null;
-		}
-		super.onPause();
-	}
-
 }

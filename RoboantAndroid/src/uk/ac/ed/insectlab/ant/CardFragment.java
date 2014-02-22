@@ -1,6 +1,7 @@
 package uk.ac.ed.insectlab.ant;
 
 import uk.co.ed.insectlab.ant.R;
+import android.app.Activity;
 import android.app.Fragment;
 import android.content.ClipData;
 import android.os.Bundle;
@@ -53,9 +54,9 @@ public class CardFragment extends Fragment {
 		if (cardView != null) {
 			view.addView(cardView, mCardViewParams);
 		}
-		
-//		final int childCount = container.getChildCount();
-		
+
+		//		final int childCount = container.getChildCount();
+
 		view.setOnLongClickListener(new View.OnLongClickListener() {
 
 			@Override
@@ -66,7 +67,7 @@ public class CardFragment extends Fragment {
 				v.startDrag(dragData, myShadow, null, 0);
 				return true;
 			}
-			
+
 		});
 
 		return view;
@@ -84,30 +85,32 @@ public class CardFragment extends Fragment {
 	}
 
 	public void setStatus(final CardStatus status) {
-		getActivity().runOnUiThread(new Runnable() {
+		Activity activity = getActivity();
+		if (activity != null) {
+			activity.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					mLoading.setVisibility(View.INVISIBLE);
+					mStatusError.setVisibility(View.INVISIBLE);
+					mStatusOK.setVisibility(View.INVISIBLE);
 
-			@Override
-			public void run() {
-				mLoading.setVisibility(View.INVISIBLE);
-				mStatusError.setVisibility(View.INVISIBLE);
-				mStatusOK.setVisibility(View.INVISIBLE);
+					switch (status) {
+					case LOADING:
+						mLoading.setVisibility(View.VISIBLE);
+						break;
+					case ERROR:
+						mStatusError.setVisibility(View.VISIBLE);
+						break;
+					case OK:
+						mStatusOK.setVisibility(View.VISIBLE);
+						break;
+					default:
 
-				switch (status) {
-				case LOADING:
-					mLoading.setVisibility(View.VISIBLE);
-					break;
-				case ERROR:
-					mStatusError.setVisibility(View.VISIBLE);
-					break;
-				case OK:
-					mStatusOK.setVisibility(View.VISIBLE);
-					break;
-				default:
+					}
 
 				}
-
-			}
-		});
+			});
+		}
 
 	}
 
