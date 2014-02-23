@@ -25,6 +25,8 @@ public class SegmentCircleActivity extends Activity implements CameraListener {
 
 	private Button mSegmentAgain;
 
+	private Button mSave;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -82,11 +84,22 @@ public class SegmentCircleActivity extends Activity implements CameraListener {
 				mCameraFragment.segmentAgain(mCircleRadMin, mCircleRadMax);
 			}
 		});
-
+		
 		mSegmentAgain.setVisibility(View.INVISIBLE);
+		
+		mSave = (Button)findViewById(R.id.btn_save_segment);
+		mSave.setOnClickListener(new View.OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				GLOBAL.getSettings().saveLens(mCameraFragment.getLens());
+				finish();
+			}
+		});
 
 		mCameraFragment.setSegmenting(true);
 		mCameraFragment.showSegmentButton(false);
+		mCameraFragment.setSegmentationDebug(true);
 	}
 
 	@Override

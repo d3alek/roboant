@@ -16,6 +16,8 @@
     <string name="error">Error</string>
     <string name="scan_qr">Scan QR code</string>
 
-    <string name="segment_circle">Segment circle</string>
-    <string name="segment_again">Segment again</string>
+    <string name="segment_circle">Segment lens</string>
+    <string name="segment_again">Detect Again</string>
+
+    <string name="save_segmentation">Save</string>
 </resources>

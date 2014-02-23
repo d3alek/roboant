@@ -84,6 +84,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 	private Mat mCircleMat;
 
+	private boolean mSegmentationDebug;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -191,6 +193,11 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		mRgbaMasked = new Mat();
 
 		loadLens();
+		
+		if (mSegmentationDebug) {
+			mOpenCvCameraView.setCrop(mWidth, mHeight);
+		}
+		
 		if (mLensFound) {
 			mSegmenting = true;
 			mCircleMat = Mat.zeros(height, width, CvType.CV_8UC4);
@@ -227,8 +234,15 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 					Core.bitwise_and(circleMat, rgba, rgba);
 					mLensFound = true;
 					mLens = new Lens((int)circle.x, (int)circle.y, (int)circle.z);
-					GLOBAL.getSettings().saveLens(mLens);
+					
 					mCameraListener.onLensFound(true);
+
+					if (mSegmentationDebug) {
+						Core.circle(rgba, new Point(mLens.x, mLens.y), mLens.radius, 
+								new Scalar(new double[] {1.0, 200.0, 0.0, 0.0}), 4);
+						return rgba; 
+					}
+
 					int min = Math.min(mWidth, mHeight);
 					mLensCropSize = new Size(min, min);
 					mOpenCvCameraView.setCrop(min, min);
@@ -246,6 +260,11 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 				}
 			}
 			else {
+				if (mSegmentationDebug) {
+					Core.circle(rgba, new Point(mLens.x, mLens.y), mLens.radius, 
+							new Scalar(new double[] {1.0, 200.0, 0.0, 0.0}), 4);
+					return rgba; 
+				}
 				Core.bitwise_and(mCircleMat, rgba, mRgbaMasked);
 
 				Rect rangeRect = new Rect(mLens.x - mLens.radius,
@@ -347,6 +366,15 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 	public void releaseCamera() {
 		mOpenCvCameraView.disconnectCamera();
+	}
+
+	public void setSegmentationDebug(boolean b) {
+		mSegmentationDebug = b;
+		
+	}
+
+	public Lens getLens() {
+		return mLens;
 	}
 
 }
