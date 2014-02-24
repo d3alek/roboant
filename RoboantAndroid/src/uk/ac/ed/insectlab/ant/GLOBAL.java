@@ -1,5 +1,6 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import org.opencv.core.Mat;
@@ -13,6 +14,7 @@ public class GLOBAL extends Application {
 
 	public static Semaphore PICTURE_MUTEX = new Semaphore(0);
 	public static Bitmap PICTURE_STORAGE;
+	public static List<Bitmap> ROUTE;
 	
 	@Override
 	public void onCreate() {

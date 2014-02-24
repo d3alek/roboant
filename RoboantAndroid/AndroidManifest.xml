@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="uk.co.ed.insectlab.ant"
-    android:versionCode="1"
-    android:versionName="1.0" >
+    android:versionCode="2"
+    android:versionName="1.1" >
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -60,6 +60,14 @@
         <activity
             android:name="uk.ac.ed.insectlab.ant.SegmentCircleActivity"
             android:label="@string/segment_circle"
+            android:parentActivityName="uk.ac.ed.insectlab.ant.MainActivity"
+            android:screenOrientation="portrait"
+            android:theme="@android:style/Theme.Holo.Light" >
+        </activity>
+        
+        <activity
+            android:name="uk.ac.ed.insectlab.ant.NavigationActivity"
+            android:label="@string/navigation"
             android:parentActivityName="uk.ac.ed.insectlab.ant.MainActivity"
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Holo.Light" >

@@ -13,6 +13,15 @@
         opencv:show_fps="false"
         opencv:camera_id="front"
         android:layout_height="240dp"/>
+    
+    <EditText 
+        android:id="@+id/pixels_num"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:inputType="numberDecimal"
+        android:textColor="@android:color/white"/>
 
     <Button 
         android:id="@+id/btn_segment_circle"

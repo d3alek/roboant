@@ -17,7 +17,6 @@ public class SerialFragment extends CardFragment implements SerialBond {
 	private static final String TAG = SerialFragment.class.getSimpleName();
 
 	interface SerialFragmentListener {
-		void deviceSpeedsReceived(int left, int right);
 		void onSerialConnected();
 		void onSerialDisconnected();
 	}
@@ -109,6 +108,7 @@ public class SerialFragment extends CardFragment implements SerialBond {
 	public void serialDisconnected() {
 		mRoboant = null;
 		setStatus(CardStatus.LOADING);
+		mSerialListener.onSerialDisconnected();
 	}
 
 
@@ -116,6 +116,7 @@ public class SerialFragment extends CardFragment implements SerialBond {
 	public void serialConnected(ArduinoZumoControl roboantControl) {
 		mRoboant = roboantControl;
 		setStatus(CardStatus.OK);
+		mSerialListener.onSerialConnected();
 	}
 
 	public void displaySpeeds(final int left, final int right) {

@@ -84,7 +84,7 @@ public class SerialThread extends Thread {
 
 	private static void refreshDeviceList() {
 		UsbSerialDriver driver = UsbSerialProber.findFirstDevice(mUsbManager);
-		if (driver != null && sDriver == null) {
+		if (driver != null) {
 			sDriver = driver;
 			openDriver();
 			startIoManager();
@@ -103,14 +103,19 @@ public class SerialThread extends Thread {
 			if (mListener != null) {
 				mListener.serialDisconnected();
 			}
-			if (sDriver != null) {
-				try {
-					sDriver.close();
-				} catch (IOException e) {
-					// Ignore.
-				}
-				sDriver = null;
+
+		}
+		if (sDriver != null) {
+			try {
+				sDriver.close();
+			} catch (IOException e) {
+				// Ignore.
 			}
+			sDriver = null;
+		}
+		if (mState == SerialState.CONNECTED) {
+			mState = SerialState.DRIVER_SEARCH;
+			lock.notify();
 		}
 	}
 
@@ -147,8 +152,7 @@ public class SerialThread extends Thread {
 
 	public void usbDisconnectedIntentReceived() {
 		stopIoManager();
-
-		mState = SerialState.DRIVER_SEARCH;
+		Log.i(TAG, "Notifying from " + Thread.currentThread().getName());
 	}
 
 	public void setSpeeds(int left, int right) {

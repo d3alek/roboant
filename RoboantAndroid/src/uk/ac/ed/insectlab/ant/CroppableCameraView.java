@@ -13,12 +13,20 @@ public class CroppableCameraView extends JavaCameraView {
 		super(context, attrs);
 	}
 
-	public void setCrop(int width, int height) {
-		mFrameHeight = height;
-		mFrameWidth = width;
-		AllocateCache();
+	public void setCrop(final int width, final int height) {
+		post(new Runnable() {
+
+			@Override
+			public void run() {
+				// TODO Auto-generated method stub
+				mFrameHeight = height;
+				mFrameWidth = width;
+				AllocateCache();
+			}
+		});
+
 	}
-	
+
 	@Override
 	public void disconnectCamera() {
 		super.disconnectCamera();

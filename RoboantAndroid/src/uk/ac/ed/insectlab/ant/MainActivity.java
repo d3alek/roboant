@@ -1,7 +1,10 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.util.List;
+
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.ac.ed.insectlab.ant.NetworkFragment.NetworkFragmentListener;
+import uk.ac.ed.insectlab.ant.RouteSelectionDialogFragment.RouteSelectedListener;
 import uk.ac.ed.insectlab.ant.SerialFragment.SerialFragmentListener;
 import uk.ac.ed.insectlab.ant.service.RoboantService;
 import uk.ac.ed.insectlab.ant.service.RoboantService.LocalBinder;
@@ -13,6 +16,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -21,11 +25,14 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 public class MainActivity extends Activity implements NetworkFragmentListener, SerialFragmentListener,
-CameraListener {
+CameraListener, RouteSelectedListener {
 
 	private static final int CAMERA_NUMBER = 1;
+
+	private static final String NAVIGATION_FRAGMENT = "navigation_fragment";
 
 	private final String TAG = MainActivity.class.getSimpleName();
 
@@ -71,16 +78,13 @@ CameraListener {
 		super.onStart();
 		Intent intent = new Intent(this, RoboantService.class);
 		startService(intent);
-
 		bindService(intent, mConnection, Context.BIND_ABOVE_CLIENT);
 	}
 
 	private ServiceConnection mConnection = new ServiceConnection() {
-
 		@Override
 		public void onServiceConnected(ComponentName className,
 				IBinder service) {
-			// We've bound to LocalService, cast the IBinder and get LocalService instance
 			LocalBinder binder = (LocalBinder) service;
 			binder.bindSerial(mSerialFragment);
 			binder.bindNetwork(mNetworkFragment);
@@ -94,6 +98,8 @@ CameraListener {
 	};
 
 	private boolean mBound;
+
+	private NavigationFragment mNavigationFragment;
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -167,21 +173,31 @@ CameraListener {
 	}
 
 	@Override
-	public void deviceSpeedsReceived(int left, int right) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	@Override
 	public void onSerialConnected() {
-		// TODO Auto-generated method stub
+		mNavigationFragment = (NavigationFragment) getFragmentManager().findFragmentByTag(NAVIGATION_FRAGMENT);
+		if (mNavigationFragment == null) {
+			mNavigationFragment = new NavigationFragment();
+			getFragmentManager().beginTransaction().add(R.id.fragment_container, mNavigationFragment, NAVIGATION_FRAGMENT).commit();
+		}
 		
 	}
 
 	@Override
 	public void onSerialDisconnected() {
-		// TODO Auto-generated method stub
 		
 	}
 
+	@Override
+	public void onRouteSelected(List<Bitmap> bitmap) {
+		if (mNavigationFragment != null) {
+			mNavigationFragment.onRouteSelected(bitmap);
+		}
+	}
+
+	@Override
+	public void onRecordRoute() {
+		Toast.makeText(this, "Recording route", Toast.LENGTH_SHORT).show();
+		mNavigationFragment.recordRoute(mCameraFragment);
+	}
+	
 }

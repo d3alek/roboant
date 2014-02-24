@@ -15,6 +15,7 @@ public class Settings {
 	private static final String KEY_SSD_CALIBRATED = "ssd_calibrated";
 	private static final String KEY_SERVER_IP = "server_ip";
 	private static final String KEY_SERVER_PORT = "server_port";
+	private static final String KEY_IMAGE_PIXELS_NUM = "image_pixels";
 	private SharedPreferences mPrefs;
 
 	public Settings(Context context) {
@@ -77,6 +78,16 @@ public class Settings {
 	
 	public int getServerPort() {
 		return mPrefs.getInt(KEY_SERVER_PORT, 0);
+	}
+
+	public void setImagePixelsNum(int pixels) {
+		Editor e = mPrefs.edit();
+		e.putInt(KEY_IMAGE_PIXELS_NUM, pixels);
+		e.apply();
+	}
+
+	public int getImagePixelsNum() {
+		return mPrefs.getInt(KEY_IMAGE_PIXELS_NUM, 0);
 	}
 
 }

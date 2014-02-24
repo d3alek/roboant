@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/CardInsides"
+    android:orientation="vertical" >
+	
+    <Button 
+        android:id="@+id/btn_select_route"
+       	android:layout_width="match_parent"
+       	android:layout_height="match_parent"
+       	android:text="@string/btn_select_route"/>
+    <Button 
+        android:id="@+id/btn_stop_recording"
+       	android:layout_width="match_parent"
+       	android:layout_height="match_parent"
+       	android:text="@string/btn_stop_recording"/>
+    
+    <LinearLayout 
+        android:id="@+id/route_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        >
+        <TextView 
+            android:id="@+id/route_length"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+        <Button 
+            android:id="@+id/btn_clear_route"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_clear_route"/>
+    </LinearLayout>
+    
+    <Button 
+        android:id="@+id/btn_go"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/btn_go"/>
+
+</LinearLayout>

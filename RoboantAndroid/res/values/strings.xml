@@ -20,4 +20,14 @@
     <string name="segment_again">Detect Again</string>
 
     <string name="save_segmentation">Save</string>
+
+    <string name="btn_select_route">Select Route</string>
+    <string name="btn_clear_route">Clear</string>
+    <string name="btn_go">Go</string>
+
+
+    <string name="navigation">Navigation</string>
+    <string name="calibrate">Calibrate</string>
+    <string name="navigate">Navigate</string>
+    <string name="btn_stop_recording">Stop Recording</string>
 </resources>
