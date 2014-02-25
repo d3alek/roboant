@@ -1,5 +1,8 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
 import uk.ac.ed.insectlab.ant.service.TcpClient;
 import uk.co.ed.insectlab.ant.R;
@@ -24,16 +27,22 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 	private static Handler mHandler;
 	private EditText mServerIP;
 	private EditText mServerPort;
+	
+	
 
 	interface NetworkFragmentListener {
 
 		void freeCamera(Handler mHandler, int messageCameraFree);
-		
+
+		void recordMessageReceived(boolean torecord);
+
+		void navigationMessageReceived();
+
 	}
-	
+
 	private NetworkFragmentListener mNetworkListener;
 	private TcpClient mTcpClient;
-	
+
 	@Override
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
@@ -118,4 +127,36 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		mTcpClient = null;
 		setStatus(CardStatus.LOADING);
 	}
+
+	
+
+	@Override
+	public void messageReceived(final String message) {
+		mHandler.post(new Runnable() {
+
+			@Override
+			public void run() {
+				Matcher matcher = Constants.mRecordPattern.matcher(message);
+
+				if (matcher.find()) {
+					if (matcher.group(1).equals("on")) {
+						mNetworkListener.recordMessageReceived(true);
+					}
+					else {
+						mNetworkListener.recordMessageReceived(false);
+					}
+				}
+				else {
+					matcher = Constants.mNavigationPattern.matcher(message);
+					if (matcher.find()) {
+						mNetworkListener.navigationMessageReceived();
+					}
+				}
+				
+			}
+
+		}
+				);
+	}
+
 }

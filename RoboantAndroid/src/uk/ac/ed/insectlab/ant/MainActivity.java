@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager.WakeLock;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -179,12 +180,12 @@ CameraListener, RouteSelectedListener {
 			mNavigationFragment = new NavigationFragment();
 			getFragmentManager().beginTransaction().add(R.id.fragment_container, mNavigationFragment, NAVIGATION_FRAGMENT).commit();
 		}
-		
+
 	}
 
 	@Override
 	public void onSerialDisconnected() {
-		
+
 	}
 
 	@Override
@@ -196,8 +197,28 @@ CameraListener, RouteSelectedListener {
 
 	@Override
 	public void onRecordRoute() {
-		Toast.makeText(this, "Recording route", Toast.LENGTH_SHORT).show();
-		mNavigationFragment.recordRoute(mCameraFragment);
+		if (mNavigationFragment != null) {
+			Toast.makeText(this, "Recording route", Toast.LENGTH_SHORT).show();
+			mNavigationFragment.recordRoute(mCameraFragment);
+		}
 	}
-	
+
+	@Override
+	public void recordMessageReceived(boolean torecord) {
+		Log.i(TAG, "IMHERE " + torecord);
+		if (torecord) {
+			onRecordRoute();
+		}
+		else {
+			if (mNavigationFragment != null) {
+				mNavigationFragment.stopRecordingRoute();
+			}
+		}
+	}
+
+	@Override
+	public void navigationMessageReceived() {
+		mNavigationFragment.beginNavigationMostRecentRoute();
+	}
+
 }

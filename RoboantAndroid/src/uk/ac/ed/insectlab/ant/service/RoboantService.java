@@ -27,6 +27,7 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 	private static final String TAG = RoboantService.class.getSimpleName();
 	private static final int NOTIFICATION_ID = 1;
 	private static final String ACTION_DISMISS = "dismiss";
+	private static final boolean DEFAULT_REMOTE_CONTROL = true;
 
 	public interface SerialBond {
 
@@ -44,6 +45,8 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 
 		void serverDisconnected();
 
+		void messageReceived(String message);
+
 	}
 
 	BroadcastReceiver mUsbDisconnectedReceiver = new BroadcastReceiver() {
@@ -52,6 +55,7 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 			mSerialThread.usbDisconnectedIntentReceived();
 		}
 	};
+	private boolean mRemoteControl = DEFAULT_REMOTE_CONTROL;
 
 	@Override
 	public void onCreate() {
@@ -73,19 +77,19 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		.setSmallIcon(R.drawable.ic_ant)
 		.setContentTitle("Roboant")
 		.setContentText("Client and serial service");
-		
+
 		NotificationCompat.InboxStyle inboxStyle = 
 				new NotificationCompat.InboxStyle();
-		
+
 		inboxStyle.setBigContentTitle("Roboant");
-		
+
 		mBuilder.setStyle(inboxStyle);
 
 		Intent dismissIntent = new Intent(this, RoboantService.class);
 		dismissIntent.setAction(ACTION_DISMISS);
 		PendingIntent piDismiss = PendingIntent.getService(this, 0, dismissIntent, 0);
 		mBuilder.addAction(android.R.drawable.ic_delete, "Terminate", piDismiss);
-		
+
 		inboxStyle.addLine(mSerialThread.getDescription());
 		inboxStyle.addLine(mClientThread.getDescription());
 
@@ -118,20 +122,24 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 
 		return START_NOT_STICKY;
 	}
-	
+
 	@Override
 	public IBinder onBind(Intent arg0) {
 		return mBinder;
 	}
 
 	public class LocalBinder extends Binder {
-		public ArduinoZumoControl getRoboantControl() {
-			if (mSerialThread.getSerialState() == SerialState.CONNECTED) {
-				return SerialThread.getRoboAntControl();
-			}
+		//		public ArduinoZumoControl getRoboantControl() {
+		//			if (mSerialThread.getSerialState() == SerialState.CONNECTED) {
+		//				return SerialThread.getRoboAntControl();
+		//			}
+		//
+		//			Log.e(TAG, "getRoboantControl null");
+		//			return null;
+		//		}
 
-			Log.e(TAG, "getRoboantControl null");
-			return null;
+		public RoboantService getService() {
+			return RoboantService.this;
 		}
 
 		public void bindSerial(SerialBond serialBond) {
@@ -168,7 +176,9 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 	@Override
 	public void speedReceivedFromNetwork(int left, int right) {
 		Log.i(TAG, "speed received from network");
-		mSerialThread.setSpeeds(left, right);
+		if (mRemoteControl) {
+			mSerialThread.setSpeeds(left, right);
+		}
 	}
 
 	@Override
@@ -185,4 +195,7 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		updateNotification();
 	}
 
+	public void setRemoteControl(boolean remoteControl) {
+		mRemoteControl = remoteControl;
+	}
 }

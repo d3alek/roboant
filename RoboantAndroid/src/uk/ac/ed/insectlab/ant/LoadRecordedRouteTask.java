@@ -14,6 +14,7 @@ public class LoadRecordedRouteTask extends AsyncTask<String, Void, List<Bitmap>>
 
 	private static final String TAG = LoadRecordedRouteTask.class.getSimpleName();
 	private RouteSelectedListener mListener;
+	private String mDirPath;
 
 	public LoadRecordedRouteTask(RouteSelectedListener listener) {
 		mListener = listener;
@@ -21,9 +22,9 @@ public class LoadRecordedRouteTask extends AsyncTask<String, Void, List<Bitmap>>
 
 	@Override
 	protected List<Bitmap> doInBackground(String... params) {
-		String dirPath = params[0];
+		mDirPath = params[0];
 
-		File dir = new File(dirPath);
+		File dir = new File(mDirPath);
 
 		LinkedList<Bitmap> list = new LinkedList<Bitmap>();
 
@@ -38,6 +39,7 @@ public class LoadRecordedRouteTask extends AsyncTask<String, Void, List<Bitmap>>
 	@Override
 	protected void onPostExecute(List<Bitmap> result) {
 		mListener.onRouteSelected(result);
+		GLOBAL.getSettings().setMostRecentRouteDirPath(mDirPath);
 		super.onPostExecute(result);
 	}
 

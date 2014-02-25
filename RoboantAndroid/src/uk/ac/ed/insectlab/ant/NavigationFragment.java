@@ -17,11 +17,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
 public class NavigationFragment extends CardFragment {
 
-	private static final long RECORD_EVERY_MS = 500;
+	private static final long RECORD_EVERY_MS = 100;
 	protected static final String TAG = NavigationFragment.class.getSimpleName();
 	private Button mGoButton;
 	private View mRouteInfoView;
@@ -153,6 +154,35 @@ public class NavigationFragment extends CardFragment {
 				new SaveRecordedRouteTask(getActivity()).execute(mRouteRecordingPictures);
 			}
 		}
+	}
+
+	public void beginNavigationMostRecentRoute() {
+		if (GLOBAL.ROUTE == null) {
+			String filePath = GLOBAL.getSettings().getMostRecentRouteDirPath();
+			if (filePath == null) {
+				Toast.makeText(getActivity(), "No route selected recently", Toast.LENGTH_SHORT).show();
+				return;
+			}
+			RouteSelectionDialogFragment.RouteSelectedListener listener = new RouteSelectionDialogFragment.RouteSelectedListener() {
+				
+				@Override
+				public void onRouteSelected(List<Bitmap> bitmap) {
+					GLOBAL.ROUTE = bitmap;
+					Intent i = new Intent(getActivity(), NavigationActivity.class);
+					startActivity(i);
+				}
+				
+				@Override
+				public void onRecordRoute() {
+					// TODO Auto-generated method stub
+					
+				}
+			};
+			new LoadRecordedRouteTask(listener).execute(filePath);
+			return;
+		}
+		Intent i = new Intent(getActivity(), NavigationActivity.class);
+		startActivity(i);
 	}
 
 }

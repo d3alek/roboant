@@ -3,6 +3,7 @@ package uk.ac.ed.insectlab.ant;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.widget.EditText;
 
 public class Settings {
 
@@ -16,6 +17,7 @@ public class Settings {
 	private static final String KEY_SERVER_IP = "server_ip";
 	private static final String KEY_SERVER_PORT = "server_port";
 	private static final String KEY_IMAGE_PIXELS_NUM = "image_pixels";
+	private static final String KEY_MOST_RECENT_ROUTE_FILE_PATH = "route_path";
 	private SharedPreferences mPrefs;
 
 	public Settings(Context context) {
@@ -88,6 +90,16 @@ public class Settings {
 
 	public int getImagePixelsNum() {
 		return mPrefs.getInt(KEY_IMAGE_PIXELS_NUM, 0);
+	}
+
+	public String getMostRecentRouteDirPath() {
+		return mPrefs.getString(KEY_MOST_RECENT_ROUTE_FILE_PATH, null);
+	}
+
+	public void setMostRecentRouteDirPath(String dirPath) {
+		Editor e = mPrefs.edit();
+		e.putString(KEY_MOST_RECENT_ROUTE_FILE_PATH, dirPath);
+		e.apply();
 	}
 
 }

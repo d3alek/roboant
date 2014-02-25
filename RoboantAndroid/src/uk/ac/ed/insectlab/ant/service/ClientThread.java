@@ -51,8 +51,12 @@ public class ClientThread extends Thread {
 			if (matcher.find()) {
 				int speedL = Integer.parseInt(matcher.group(1));
 				int speedR = Integer.parseInt(matcher.group(2));
-
 				mNetworkListener.speedReceivedFromNetwork(speedL, speedR);
+			}
+			else {
+				Log.i(TAG, "sending to mListener" + mListener);
+				mListener.messageReceived(message);
+				Log.i(TAG, "sent to mListener");
 			}
 		}
 
@@ -83,7 +87,7 @@ public class ClientThread extends Thread {
 			}
 			mTcpClient = new TcpClient(mOnMessageReceived);
 			mTcpClient.run(mSettings.getServerIP(), mSettings.getServerPort(), handler);
-			
+
 			Log.i(TAG, "Disconnected in loop");
 
 			if (!mRunning) {
@@ -96,7 +100,7 @@ public class ClientThread extends Thread {
 				e.printStackTrace();
 			}
 		}
-		
+
 	}
 
 	public void setBond(NetworkBond networkBond) {

@@ -4,13 +4,13 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import uk.co.ed.insectlab.ant.R;
+import android.app.Activity;
+import android.app.Fragment;
 import android.graphics.Bitmap;
 import android.graphics.Matrix;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.HandlerThread;
-import android.os.Message;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -21,7 +21,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.ImageView.ScaleType;
 
-public class SwayingHomingFragment extends CardFragment {
+public class SwayingHomingFragment extends Fragment {
 
 	protected static final String TAG = SwayingHomingFragment.class.getSimpleName();
 	private ImageView mArrow;
@@ -34,6 +34,18 @@ public class SwayingHomingFragment extends CardFragment {
 	private static AIControlTask mAIControlTask;
 	private boolean mSerialSet;
 	private boolean mCameraSet;
+	//	private View mView;
+
+	interface NavigationListener {
+
+		void onNavigationStarted();
+
+		void onNavigationStopped();
+
+	}
+
+	private NavigationListener mListener;
+	private View mView;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -43,13 +55,30 @@ public class SwayingHomingFragment extends CardFragment {
 	}
 
 	@Override
-	public View onCreateCardView(LayoutInflater inflater, ViewGroup container,
+	public void onAttach(Activity activity) {
+		try {
+			mListener = (NavigationListener)activity;
+		} catch (ClassCastException e) {
+			new RuntimeException("Parent activity does not implement listener");
+		}
+		super.onAttach(activity);
+	}
+
+	@Override
+	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 		View v = inflater.inflate(R.layout.fragment_swaying_homing, container, false);
 
 		mArrow = (ImageView) v.findViewById(R.id.arrow);
 
 		return v;
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		mView = getView();
+		mView.setVisibility(View.INVISIBLE);
 	}
 
 	public void setNetwork(NetworkControl network) {
@@ -89,6 +118,7 @@ public class SwayingHomingFragment extends CardFragment {
 			mAIControlTask.stop();
 			mAIControlTask = null;
 		}
+		mListener.onNavigationStarted();
 		mRoboant.setSpeeds(-100, 100);
 		mCalibrateSSDMin = Double.MAX_VALUE;
 		mCalibrateSSDMAX = Double.MIN_VALUE;
@@ -122,13 +152,14 @@ public class SwayingHomingFragment extends CardFragment {
 				}
 				else {
 					if (System.currentTimeMillis() - mLastTimeChanged > 4000) {
-                        Log.i(TAG, "Changed not");
+						Log.i(TAG, "Changed not");
 						// do not post this callback again
 						GLOBAL.getSettings().setSSDCalibrationResults(true, mCalibrateSSDMin, mCalibrateSSDMAX);
 						mSSDCalibrated = true;
 						mSSDMin = mCalibrateSSDMin;
 						mSSDMax = mCalibrateSSDMAX;
 						mRoboant.setSpeeds(0, 0);
+						mListener.onNavigationStopped();
 						return;
 					}
 				}
@@ -148,7 +179,7 @@ public class SwayingHomingFragment extends CardFragment {
 
 		private List<Bitmap> mRoutePictures;
 
-		private boolean mStop;
+		private boolean mStop = false;
 
 		private NetworkControl mNetworkControl;
 
@@ -173,26 +204,21 @@ public class SwayingHomingFragment extends CardFragment {
 		@Override
 		protected void onPreExecute() {
 			Log.i(TAG, "onPreExecute");
+			mListener.onNavigationStarted();
+			mView.setVisibility(View.VISIBLE);
+			mView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
+					| View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
+			getActivity().getActionBar().hide();
+			mView.setOnClickListener(new View.OnClickListener() {
+
+				@Override
+				public void onClick(View v) {
+					stop();
+				}
+			});
+			Log.i(TAG, "after onPreExecute");
 			super.onPreExecute();
 		}
-
-		private class TurnStep {
-
-			private Bitmap bmp;
-			private int deg;
-
-			public TurnStep(Bitmap bmp, int deg) {
-				this.bmp = bmp; this.deg = deg;
-			}
-		}
-
-		double mTotalFlow;
-
-		//		private HandlerThread mHandlerThread;
-
-		//		private Handler mHandler;
-
-		private double mHandlerMinDistResult;
 
 
 		@Override
@@ -203,27 +229,6 @@ public class SwayingHomingFragment extends CardFragment {
 				mSSDMax = GLOBAL.getSettings().getSSDMax();
 				Log.i(TAG, "mSSD " + mSSDMin + " " + mSSDMax);
 			}
-
-			//			mHandlerThread = new HandlerThread("ai_control_handler");
-			//			mHandlerThread.start();
-			//
-			//			while(!mHandlerThread.isAlive()) {};  
-			//			mHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
-			//
-			//				@Override
-			//				public boolean handleMessage(Message msg) {
-			//					switch (msg.what) {
-			//					case OpenCVCamera.MSG_PICTURE:
-			//						mTakePictureBuffer = (Bitmap)msg.obj;
-			//						return true;
-			//					case AsyncMinSSDTask.MSG_MIN:
-			//						mHandlerMinDistResult = (Double)msg.obj;
-			//						mMinCalcMutex.release();
-			//						return true;
-			//					}
-			//					return false;
-			//				}
-			//			});
 
 			mRoboAntControl = params[0];
 
@@ -269,7 +274,7 @@ public class SwayingHomingFragment extends CardFragment {
 				publishProgress((float)(dir*rotateSpeed));
 
 				if (rotateSpeed > 40) {
-					mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
+					mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 400);
 				}
 
 				dir = -dir;
@@ -292,6 +297,10 @@ public class SwayingHomingFragment extends CardFragment {
 		@Override
 		protected void onPostExecute(Void result) {
 			Log.i(TAG, "onPostExecute");
+			//			mView.setVisibility(View.INVISIBLE);
+			getActivity().getActionBar().show();
+			mView.setVisibility(View.INVISIBLE);
+			mListener.onNavigationStopped();
 			super.onPostExecute(result);
 		}
 
@@ -338,7 +347,7 @@ public class SwayingHomingFragment extends CardFragment {
 			return true;
 		case R.id.navigate:
 			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
-			mAIControlTask.execute(mRoboant);
+			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -348,8 +357,20 @@ public class SwayingHomingFragment extends CardFragment {
 	public void onPause() {
 		if (mAIControlTask != null) {
 			mAIControlTask.stop();
+			mAIControlTask = null;
 		}
 		super.onPause();
+	}
+
+	public void toggleNavigation() {
+		if (mAIControlTask != null) {
+			mAIControlTask.stop();
+			mAIControlTask = null;
+		}
+		else {
+			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
+			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+		}
 	}
 
 

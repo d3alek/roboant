@@ -3,10 +3,12 @@
     <item
         android:id="@+id/navigate"
         android:title="@string/navigate"
+        android:showAsAction="ifRoom"
         />
     <item
         android:id="@+id/calibrate"
         android:title="@string/calibrate"
+        android:showAsAction="ifRoom"
         />
 
 </menu>

@@ -463,7 +463,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		}
 	}
 
-	private void setImagePixelsNum(int pixels) {
+	public void setImagePixelsNum(int pixels) {
 		int newWidth = (int)Math.sqrt(pixels);
 		int newHeight = newWidth;
 		//		mOpenCvCameraView.setCrop(newWidth, newHeight);
@@ -473,6 +473,10 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	public void saveNewImagePixelsNum(int pixels) {
 		GLOBAL.getSettings().setImagePixelsNum(pixels);
 		setImagePixelsNum(pixels);
+	}
+
+	public void fixPixelSize() {
+		mPixelsNumText.setEnabled(false);
 	}
 
 }

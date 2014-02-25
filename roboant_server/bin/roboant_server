@@ -66,6 +66,17 @@ def sendWheels(speedL, speedR):
     if mProtocol != None:
         mProtocol.sendLine('l' + str(int(speedL)) + 'r' + str(int(speedR)))
 
+def sendRecord(record):
+    if mProtocol != None:
+        if record:
+            mProtocol.sendLine('record on')
+        else:
+            mProtocol.sendLine('record off')
+
+def sendNavigation():
+    if mProtocol != None:
+        mProtocol.sendLine('ai')
+
 def moveLeftWheel(speed):
     global toSendLeftWheelVal
     toSendLeftWheelVal = speed
@@ -112,10 +123,16 @@ def events_tick():
                 downDown = False 
 
 
-
         elif event.type == JOYBUTTONDOWN:
             print "JOYBUTTONDOWN"
             print event.button
+            if event.button == 1:
+                sendRecord(True)
+            if event.button == 0:
+                sendRecord(False)
+            if event.button == 10:
+                sendNavigation()
+
         elif event.type == JOYBUTTONUP:
             print "JOYBUTTONUP" 
             print event.button

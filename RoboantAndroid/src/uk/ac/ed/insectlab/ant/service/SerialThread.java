@@ -115,7 +115,9 @@ public class SerialThread extends Thread {
 		}
 		if (mState == SerialState.CONNECTED) {
 			mState = SerialState.DRIVER_SEARCH;
-			lock.notify();
+			synchronized (lock) {
+				lock.notify();
+			}
 		}
 	}
 

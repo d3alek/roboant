@@ -1,6 +1,9 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.util.regex.Matcher;
+
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
+import uk.ac.ed.insectlab.ant.SwayingHomingFragment.NavigationListener;
 import uk.ac.ed.insectlab.ant.service.RoboantService;
 import uk.ac.ed.insectlab.ant.service.RoboantService.LocalBinder;
 import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
@@ -14,19 +17,29 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.view.View;
+import android.view.WindowManager;
 
-public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener {
+public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener, NavigationListener {
+	private static final String TAG = NavigationActivity.class.getSimpleName();
 	private boolean mBound;
 	private CameraFragment mCameraFragment;
 	private SwayingHomingFragment mSwayingHomingFragment;
+	private RoboantService mService;
+	Handler mHandler;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		
-		setContentView(R.layout.activity_main);
+		setContentView(R.layout.activity_navigation);
+		
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 		
 		FragmentManager fragmentManager = getFragmentManager();
 		FragmentTransaction transaction = fragmentManager.beginTransaction();
@@ -35,7 +48,7 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 		mSwayingHomingFragment = new SwayingHomingFragment();
 		
 		transaction.add(R.id.fragment_container, mCameraFragment);
-		transaction.add(R.id.fragment_container, mSwayingHomingFragment);
+		transaction.add(R.id.arrow_container, mSwayingHomingFragment);
 		
 		transaction.commit();
 	}
@@ -43,18 +56,27 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 	@Override
 	protected void onStart() {
 		super.onStart();
+		mHandler = new Handler();
 		Intent intent = new Intent(this, RoboantService.class);
 		startService(intent);
 		bindService(intent, mConnection, Context.BIND_ABOVE_CLIENT);
+		
+		if (GLOBAL.ROUTE != null && GLOBAL.ROUTE.size() > 0) {
+			Bitmap routeSample = GLOBAL.ROUTE.get(0);
+			mCameraFragment.setImagePixelsNum(routeSample.getHeight()*routeSample.getWidth());
+			mCameraFragment.fixPixelSize();
+		}
 	}
 
 	private ServiceConnection mConnection = new ServiceConnection() {
+
 		@Override
 		public void onServiceConnected(ComponentName className,
 				IBinder service) {
 			LocalBinder binder = (LocalBinder) service;
 			binder.bindSerial(NavigationActivity.this);
 			binder.bindNetwork(NavigationActivity.this);
+			mService = binder.getService();
 			mBound = true;
 		}
 
@@ -111,5 +133,31 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 	@Override
 	public void onLensFound(boolean b) {
 		
+	}
+
+	@Override
+	public void messageReceived(final String message) {
+		mHandler.post(new Runnable() {
+			
+			@Override
+			public void run() {
+				Matcher matcher = Constants.mNavigationPattern.matcher(message);
+				
+				if (matcher.find()) {
+					mSwayingHomingFragment.toggleNavigation();
+				}
+			}
+		});
+		
+	}
+
+	@Override
+	public void onNavigationStarted() {
+		mService.setRemoteControl(false);
+	}
+
+	@Override
+	public void onNavigationStopped() {
+		mService.setRemoteControl(true);
 	}
 }
