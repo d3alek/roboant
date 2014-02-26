@@ -162,12 +162,14 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 			@Override
 			public void onTextChanged(CharSequence s, int start, int before, int count) {
 				int pixels = Integer.parseInt(s.toString().trim());
-				if (pixels == mLensCropSize.height * mLensCropSize.width) {
-					return;
-				}
-				else {
-					//					setImagePixelsNum(pixels);
-					saveNewImagePixelsNum(pixels);
+				if (mLensFound) {
+					if (pixels == mLensCropSize.height * mLensCropSize.width) {
+						return;
+					}
+					else {
+						//					setImagePixelsNum(pixels);
+						saveNewImagePixelsNum(pixels);
+					}
 				}
 			}
 
@@ -266,7 +268,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 			pixels = min * min;
 		}
 		setImagePixelsNum(pixels);
-			
+
 	}
 
 	@Override
@@ -451,9 +453,10 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		return mLens;
 	}
 
+	/** Returns null when camera not ready **/
 	public Bitmap getPicture() {
 		if (!mCameraViewStarted || mRgbaSave.cols() == 0 || mRgbaSave.rows() == 0) {
-			Log.i(TAG, "IMHERE");
+			Log.i(TAG, "Not ready yet!");
 			return null;
 		}
 		synchronized (mPictureLock) {

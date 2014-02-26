@@ -46,6 +46,7 @@ public class SwayingHomingFragment extends Fragment {
 
 	private NavigationListener mListener;
 	private View mView;
+	private List<Point> mLensPixels;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -97,7 +98,7 @@ public class SwayingHomingFragment extends Fragment {
 		mCamera = camera;
 		mCameraSet = true;
 	}
-
+	
 	private double mCalibrateSSDMin;
 
 	private double mCalibrateSSDMAX;
@@ -118,6 +119,14 @@ public class SwayingHomingFragment extends Fragment {
 			mAIControlTask.stop();
 			mAIControlTask = null;
 		}
+
+		if (mLensPixels == null) {
+			while (mCamera.getPicture() == null) {
+				Log.i(TAG, "Waiting for camera");
+			}
+			mLensPixels = Util.getLensPixels(mCamera.getPicture());
+		}
+		
 		mListener.onNavigationStarted();
 		mRoboant.setSpeeds(-100, 100);
 		mCalibrateSSDMin = Double.MAX_VALUE;
@@ -136,7 +145,7 @@ public class SwayingHomingFragment extends Fragment {
 				Bitmap bmp = mCamera.getPicture();
 				boolean changed = false;
 
-				double ssd = Util.imagesSSD(bmp, mCalibrateBmp);
+				double ssd = Util.imagesSSD(bmp, mCalibrateBmp, mLensPixels);
 				if (ssd < mCalibrateSSDMin) {
 					mCalibrateSSDMin = ssd;
 					changed = true;
@@ -204,6 +213,7 @@ public class SwayingHomingFragment extends Fragment {
 		@Override
 		protected void onPreExecute() {
 			Log.i(TAG, "onPreExecute");
+
 			mListener.onNavigationStarted();
 			mView.setVisibility(View.VISIBLE);
 			mView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -224,6 +234,14 @@ public class SwayingHomingFragment extends Fragment {
 		@Override
 		protected Void doInBackground(ArduinoZumoControl... params) {
 			Log.i(TAG, "doInBackground");
+
+			if (mLensPixels == null) {
+				while (mCamera.getPicture() == null) {
+					Log.i(TAG, "Waiting for camera");
+				}
+				mLensPixels = Util.getLensPixels(mCamera.getPicture());
+			}
+
 			if (mSSDCalibrated) {
 				mSSDMin = GLOBAL.getSettings().getSSDMin();
 				mSSDMax = GLOBAL.getSettings().getSSDMax();
@@ -246,7 +264,7 @@ public class SwayingHomingFragment extends Fragment {
 			double thisDist;
 			int rotateSpeed;
 
-			int speedAdj = 200;
+			int speedAdj = 300;
 
 			Bitmap thisPicture;
 
@@ -259,7 +277,7 @@ public class SwayingHomingFragment extends Fragment {
 				minDist = Double.MAX_VALUE;
 
 				for (int i = 0; i < routePics.size(); ++i) {
-					thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax);
+					thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax, mLensPixels);
 					if (thisDist < minDist) {
 						minDist = thisDist;
 						Log.i(TAG, "loop min is " + minDist + " at " + i);
@@ -274,7 +292,7 @@ public class SwayingHomingFragment extends Fragment {
 				publishProgress((float)(dir*rotateSpeed));
 
 				if (rotateSpeed > 40) {
-					mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 400);
+					mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
 				}
 
 				dir = -dir;

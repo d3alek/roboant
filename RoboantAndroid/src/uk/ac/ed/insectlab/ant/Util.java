@@ -5,7 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import android.app.Activity;
 import android.content.Context;
@@ -252,33 +254,38 @@ public class Util {
 		return min;
 	}
 
-	private class Point {
-		int x, y;
-		public Point(int x, int y) {
-			this.x = x; this.y = y;
-		}
+	
+
+	public static double imagesSSD(Bitmap b1, Bitmap b2, List<Point> pointsToCheck) {
+		return imagesSSD(b1, b2, 0, 0, pointsToCheck);
 	}
 
-	public static double imagesSSD(Bitmap b1, Bitmap b2) {
-		return imagesSSD(b1, b2, 0, 0);
-	}
-
-	public synchronized static double imagesSSD(Bitmap b1, Bitmap b2, double ssdMin, double ssdMax) {
+	public synchronized static double imagesSSD(Bitmap b1, Bitmap b2, double ssdMin, double ssdMax, List<Point> pointsToCheck) {
 
 		double ssd = 0;
-		int pixel1, pixel2, r1, r2, g1, g2, bl1, bl2;
+		int pixel1, pixel2, g1, g2;
 
-		for (int i = 0; i < b1.getWidth(); ++i) {
-			for (int j = 0; j < b1.getHeight(); ++j) {
-				pixel1 = b1.getPixel(i, j);
-				pixel2 = b2.getPixel(i, j);
+		if (pointsToCheck != null) {
+			for (Point p : pointsToCheck) {
+				pixel1 = b1.getPixel(p.x, p.y);
+				pixel2 = b2.getPixel(p.x, p.y);
 				g1 = Color.green(pixel1);
 				g2 = Color.green(pixel2);
 				ssd += (g1 - g2) * (g1 - g2);
+			}
+		}
+		else {
 
+			for (int i = 0; i < b1.getWidth(); ++i) {
+				for (int j = 0; j < b1.getHeight(); ++j) {
+					pixel1 = b1.getPixel(i, j);
+					pixel2 = b2.getPixel(i, j);
+					g1 = Color.green(pixel1);
+					g2 = Color.green(pixel2);
+					ssd += (g1 - g2) * (g1 - g2);
+				}
 
 			}
-
 		}
 		Log.i(TAG, "SSD " + ssd);
 		if (ssdMin == ssdMax && ssdMax == 0) {
@@ -305,5 +312,47 @@ public class Util {
 			return normalizeSSD(ssd, ssdMin, ssdMax);
 		}
 		return calibrated;
+	}
+	
+//	public static List<Point> getLensPixels(Lens lens) {
+//		int left = lens.x - lens.radius;
+//		int right = lens.x + lens.radius;
+//		int bottom = lens.x + lens.radius;
+//		int top = lens.x - lens.radius;
+//		ArrayList<Point> points = new ArrayList<Point>();
+//		for (int i = left; i < right; ++i) {
+//			for (int j = top; j < bottom; ++j) {
+//				if (pointsDist(i, j, lens.x, lens.y) <= lens.radius) {
+//					points.add(new Point(i, j));
+//				}
+//			}
+//
+//		}
+//		
+//		Log.i(TAG, "For lens (" + lens.x + ", " + lens.y + ", " + lens.radius + ") " + points.size());
+//		
+//		return points;
+//	}
+	
+	public static List<Point> getLensPixels(Bitmap sample) {
+		ArrayList<Point> points = new ArrayList<Point>();
+		int pixel;
+		for (int i = 0; i < sample.getWidth(); ++i) {
+			for (int j = 0; j < sample.getHeight(); ++j) {
+				pixel = sample.getPixel(i, j);
+				if (Color.green(pixel) != 0) {
+					points.add(new Point(i, j));
+				}
+			}
+
+		}
+		
+		Log.i(TAG, "For bitmap " + sample.getWidth() + ", " + sample.getHeight() + " - " + points.size());
+		
+		return points;
+	}
+
+	private static double pointsDist(int p1x, int p1y, int p2x, int p2y) {
+		return Math.sqrt((p1x - p2x) * (p1x - p2x) + (p1y - p2y) * (p1y - p2y));
 	}
 }

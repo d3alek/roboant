@@ -7,10 +7,13 @@ import uk.co.ed.insectlab.ant.R;
 import android.app.DialogFragment;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,6 +38,7 @@ public class NavigationFragment extends CardFragment {
 	private boolean mRecordingRoute;
 	private boolean mToStopRecording;
 	private Button mStopRecording;
+	private WakeLock mWakeLock;
 	
 	@Override
 	public void onStart() {
@@ -99,6 +103,14 @@ public class NavigationFragment extends CardFragment {
 		setLabel("Navigation");
 		return v;
 	}
+	
+	@Override
+	public void onPause() {
+		super.onPause();
+		if (mRecordingRoute) {
+			stopRecordingRoute();
+		}
+	}
 
 	private void showRouteSelectionDialog() {
 		FragmentTransaction ft = getFragmentManager().beginTransaction();
@@ -124,9 +136,15 @@ public class NavigationFragment extends CardFragment {
 		mCamera = camera;
 		mRouteRecordingPictures = new LinkedList<Bitmap>();
 		mRecordingRoute = true;
-		mGoButton.setVisibility(View.INVISIBLE);
-		mRouteInfoView.setVisibility(View.INVISIBLE);
+		mGoButton.setVisibility(View.GONE);
+		mRouteInfoView.setVisibility(View.GONE);
 		mStopRecording.setVisibility(View.VISIBLE);
+		mSelectRouteButton.setVisibility(View.GONE);
+		
+		final PowerManager pm = (PowerManager) getActivity().getSystemService(Context.POWER_SERVICE);
+        this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "recording route");
+        this.mWakeLock.acquire();
+		
 		mHandler.postDelayed(new Runnable() {
 			@Override
 			public void run() {
@@ -150,6 +168,7 @@ public class NavigationFragment extends CardFragment {
 				mRecordingRoute = false;
 				mToStopRecording = true;
 				mStopRecording.setVisibility(View.GONE);
+				this.mWakeLock.release();
 				onRouteSelected(mRouteRecordingPictures);
 				new SaveRecordedRouteTask(getActivity()).execute(mRouteRecordingPictures);
 			}

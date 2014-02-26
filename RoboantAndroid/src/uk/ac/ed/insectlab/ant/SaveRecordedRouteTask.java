@@ -23,6 +23,7 @@ public class SaveRecordedRouteTask extends AsyncTask<List<Bitmap>, Void, Void> {
 	protected Void doInBackground(List<Bitmap>... params) {
 		Log.i(TAG, "Starting doInBackground");
 		File dir = Util.getNewRouteStorageDir(mContext);
+		GLOBAL.getSettings().setMostRecentRouteDirPath(dir.getAbsolutePath());
 		int num = 0;
 		for (Bitmap bitmap: params[0]) {
 			File picture = Util.getRoutePictureFile(dir, num++);
