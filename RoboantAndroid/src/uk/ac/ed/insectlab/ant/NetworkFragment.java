@@ -27,8 +27,8 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 	private static Handler mHandler;
 	private EditText mServerIP;
 	private EditText mServerPort;
-	
-	
+
+
 
 	interface NetworkFragmentListener {
 
@@ -128,35 +128,27 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		setStatus(CardStatus.LOADING);
 	}
 
-	
+
 
 	@Override
 	public void messageReceived(final String message) {
-		mHandler.post(new Runnable() {
+		Matcher matcher = Constants.mRecordPattern.matcher(message);
 
-			@Override
-			public void run() {
-				Matcher matcher = Constants.mRecordPattern.matcher(message);
-
-				if (matcher.find()) {
-					if (matcher.group(1).equals("on")) {
-						mNetworkListener.recordMessageReceived(true);
-					}
-					else {
-						mNetworkListener.recordMessageReceived(false);
-					}
-				}
-				else {
-					matcher = Constants.mNavigationPattern.matcher(message);
-					if (matcher.find()) {
-						mNetworkListener.navigationMessageReceived();
-					}
-				}
-				
+		if (matcher.find()) {
+			if (matcher.group(1).equals("on")) {
+				mNetworkListener.recordMessageReceived(true);
 			}
-
+			else {
+				mNetworkListener.recordMessageReceived(false);
+			}
 		}
-				);
+		else {
+			matcher = Constants.mNavigationPattern.matcher(message);
+			if (matcher.find()) {
+				mNetworkListener.navigationMessageReceived();
+			}
+		}
+
 	}
 
 }

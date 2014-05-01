@@ -13,19 +13,10 @@ public class RoboAntControl implements ArduinoZumoControl {
 	private static final long WRITE_INTERVAL = 25; // min 25
 	private static final String TAG = "RoboAntControl";
 
-//	private HandlerThread mHandlerThread;
-
-//	private Handler mHandler;
-
 	int TURN_SPEED = 80;
 
 	public RoboAntControl(SerialInputOutputManager sm) {
 		mSerialIoManager = sm;
-//		mHandlerThread = new HandlerThread("ai_control_handler");
-//		mHandlerThread.start();
-
-//		while(!mHandlerThread.isAlive()) {};  
-//		mHandler = new Handler(mHandlerThread.getLooper(), null);
 	}
 
 	private synchronized void sendSpeeds() {
@@ -39,12 +30,14 @@ public class RoboAntControl implements ArduinoZumoControl {
 		}
 	}
 
+	@Override
 	public synchronized void setSpeeds(int left, int right) {
 		mLeftSpeed = left; mRightSpeed = right;
 		sendSpeeds();
 	}
-
-	public void simpleTurnInPlaceBlocking(final int turnSpeed,  final int turnTime) {
+	
+	@Override
+	public void turnInPlaceBlocking(final int turnSpeed,  final int turnTime) {
 
 		setSpeeds(turnSpeed, -turnSpeed);
 

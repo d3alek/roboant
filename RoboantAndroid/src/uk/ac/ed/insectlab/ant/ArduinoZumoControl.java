@@ -4,5 +4,5 @@ public interface ArduinoZumoControl {
 
 	void setSpeeds(int speedLeft, int speedRight);
 
-	void simpleTurnInPlaceBlocking(int speed, int turnTime);
+	void turnInPlaceBlocking(int speed, int turnTime);
 }

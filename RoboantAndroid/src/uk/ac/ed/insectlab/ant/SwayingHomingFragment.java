@@ -283,16 +283,13 @@ public class SwayingHomingFragment extends Fragment {
 						Log.i(TAG, "loop min is " + minDist + " at " + i);
 					}
 				}
-				Log.i(TAG, "final min is " + minDist);
 
 				rotateSpeed = (int)(speedAdj * minDist);
-
-				Log.i(TAG, "rotateSpeed is " + rotateSpeed);
 
 				publishProgress((float)(dir*rotateSpeed));
 
 				if (rotateSpeed > 40) {
-					mRoboAntControl.simpleTurnInPlaceBlocking(dir*rotateSpeed, 300);
+					mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
 				}
 
 				dir = -dir;
