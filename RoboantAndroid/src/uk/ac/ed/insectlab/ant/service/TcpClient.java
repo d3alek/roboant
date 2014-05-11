@@ -188,7 +188,7 @@ public class TcpClient implements NetworkControl {
 			}
 
 		} catch (Exception e) {
-
+			e.printStackTrace();
 		}
 
 	}

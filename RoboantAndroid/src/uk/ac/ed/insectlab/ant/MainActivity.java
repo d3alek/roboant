@@ -198,27 +198,34 @@ CameraListener, RouteSelectedListener {
 	@Override
 	public void onRecordRoute() {
 		if (mNavigationFragment != null) {
-			Toast.makeText(this, "Recording route", Toast.LENGTH_SHORT).show();
-			mNavigationFragment.recordRoute(mCameraFragment);
+			Toast.makeText(MainActivity.this, "Recording route", Toast.LENGTH_SHORT).show();
+			mNavigationFragment.recordRoute(mCameraFragment);				
 		}
 	}
 
-	@Override
-	public void recordMessageReceived(boolean torecord) {
-		Log.i(TAG, "IMHERE " + torecord);
-		if (torecord) {
-			onRecordRoute();
-		}
-		else {
-			if (mNavigationFragment != null) {
-				mNavigationFragment.stopRecordingRoute();
+@Override
+public void recordMessageReceived(final boolean torecord) {
+	Log.i(TAG, "IMHERE " + torecord);
+	runOnUiThread(new Runnable() {
+
+		@Override
+		public void run() {
+			if (torecord) {
+				onRecordRoute();
 			}
+			else {
+				if (mNavigationFragment != null) {
+					mNavigationFragment.stopRecordingRoute();
+				}
+			}		
 		}
-	}
+	});
 
-	@Override
-	public void navigationMessageReceived() {
-		mNavigationFragment.beginNavigationMostRecentRoute();
-	}
+}
+
+@Override
+public void navigationMessageReceived() {
+	mNavigationFragment.beginNavigationMostRecentRoute();
+}
 
 }
