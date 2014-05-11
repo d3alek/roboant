@@ -1,7 +1,6 @@
 package uk.ac.ed.insectlab.ant;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
 import uk.ac.ed.insectlab.ant.service.TcpClient;
@@ -11,6 +10,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -83,6 +84,48 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 
 		mServerIP.setText(GLOBAL.getSettings().getServerIP());
 		mServerPort.setText(GLOBAL.getSettings().getServerPort() + "");
+
+		mServerIP.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count,
+					int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				GLOBAL.getSettings().setServerAddress(s.toString(), Integer.parseInt(mServerPort.getText().toString()));
+			}
+		});
+
+		mServerPort.addTextChangedListener(new TextWatcher() {
+
+			@Override
+			public void onTextChanged(CharSequence s, int start, int before, int count) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void beforeTextChanged(CharSequence s, int start, int count,
+					int after) {
+				// TODO Auto-generated method stub
+
+			}
+
+			@Override
+			public void afterTextChanged(Editable s) {
+				GLOBAL.getSettings().setServerAddress(mServerIP.getText().toString(), Integer.parseInt(s.toString()));
+			}
+		});
 
 		Button scanQR = (Button)view.findViewById(R.id.btn_scan_qr);
 		scanQR.setOnClickListener(new View.OnClickListener() {
