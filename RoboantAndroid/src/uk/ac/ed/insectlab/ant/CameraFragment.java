@@ -281,6 +281,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	@Override
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		Mat rgba = inputFrame.rgba();
+		
+//		Log.i(TAG, "Size, " + rgba.size().height + " " + rgba.size().width);
 
 		if (mSegmenting) {
 			if (!mLensFound) {
@@ -318,6 +320,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 							mLens.y - mLens.radius, mLens.radius*2, mLens.radius*2);
 					Log.i(TAG, "rangeRect " + rangeRect.width + " " + rangeRect.height + " " + rgba.cols() + " " + rgba.rows());
 					mRgbaCropped = rgba.submat(rangeRect);
+					Core.flip(mRgbaCropped.t(), mRgbaCropped, 1);
 
 					Imgproc.resize(mRgbaCropped, mRgbaShrinked, mLensCropSize);
 					Imgproc.resize(mRgbaShrinked, mRgbaZoomed, mZoomSize);
@@ -341,6 +344,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 				Rect rangeRect = new Rect(mLens.x - mLens.radius,
 						mLens.y - mLens.radius, mLens.radius*2, mLens.radius*2);
 				mRgbaCropped = mRgbaMasked.submat(rangeRect);
+				Core.flip(mRgbaCropped.t(), mRgbaCropped, 1);
+				Core.flip(mRgbaCropped, mRgbaCropped, 1);
 
 				Imgproc.resize(mRgbaCropped, mRgbaShrinked, mLensCropSize);
 				Imgproc.resize(mRgbaShrinked, mRgbaZoomed, mZoomSize);

@@ -262,11 +262,15 @@ public class SwayingHomingFragment extends Fragment {
 			int dir = 1; //right
 			double minDist;
 			double thisDist;
+			double prevDist = 0;
 			int rotateSpeed;
 
 			int speedAdj = 300;
+			double speedAdjGradient = 0.0005;
 
 			Bitmap thisPicture;
+			
+			boolean GRADIENT = true;
 
 			while (true) {
 				if (mStop) {
@@ -277,22 +281,38 @@ public class SwayingHomingFragment extends Fragment {
 				minDist = Double.MAX_VALUE;
 
 				for (int i = 0; i < routePics.size(); ++i) {
-					thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax, mLensPixels);
+					if (GRADIENT) {
+						thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mLensPixels);
+					}
+					else {
+						thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax, mLensPixels);
+					}
 					if (thisDist < minDist) {
 						minDist = thisDist;
-						Log.i(TAG, "loop min is " + minDist + " at " + i);
 					}
 				}
-
-				rotateSpeed = (int)(speedAdj * minDist);
+				
+				if (GRADIENT) {
+					if (prevDist != 0) {
+						rotateSpeed = (int)(speedAdjGradient * (minDist - prevDist));
+						Log.i(TAG, "rotateSpeed " + rotateSpeed);
+					}
+					else {
+						rotateSpeed = 0;
+					}
+					prevDist = minDist;
+				}
+				else {
+					rotateSpeed = (int)(speedAdj * minDist);
+				}
 
 				publishProgress((float)(dir*rotateSpeed));
 
-				if (rotateSpeed > 40) {
+				if (Math.abs(rotateSpeed) > 40) {
 					mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
 				}
 
-				dir = -dir;
+//				dir = -dir;
 
 				moveForward(80, 200);
 			}

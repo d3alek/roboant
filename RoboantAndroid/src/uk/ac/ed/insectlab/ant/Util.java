@@ -35,7 +35,7 @@ import android.view.Surface;
 
 public class Util {
 
-	private static final String DIR_NAME = "RoboAnt";
+	private static final String DIR_NAME = "RoboAnt5";
 
 
 	protected static final String TAG = "Util";
@@ -287,7 +287,6 @@ public class Util {
 
 			}
 		}
-		Log.i(TAG, "SSD " + ssd);
 		if (ssdMin == ssdMax && ssdMax == 0) {
 			return ssd;
 		}
