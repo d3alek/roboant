@@ -24,13 +24,13 @@ import android.os.IBinder;
 import android.view.View;
 import android.view.WindowManager;
 
-public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener, NavigationListener {
+public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener, NavigationListener{
 	private static final String TAG = NavigationActivity.class.getSimpleName();
 	private boolean mBound;
 	private CameraFragment mCameraFragment;
-	private SwayingHomingFragment mSwayingHomingFragment;
 	private RoboantService mService;
 	Handler mHandler;
+	private LookAroundHomingFragment mLookAroundHomingFragment;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -45,10 +45,11 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 		FragmentTransaction transaction = fragmentManager.beginTransaction();
 		
 		mCameraFragment = new CameraFragment();
-		mSwayingHomingFragment = new SwayingHomingFragment();
+//		mLookAroundHomingFragment = new SwayingHomingFragment();
+		mLookAroundHomingFragment = new LookAroundHomingFragment();
 		
 		transaction.add(R.id.fragment_container, mCameraFragment);
-		transaction.add(R.id.arrow_container, mSwayingHomingFragment);
+		transaction.add(R.id.arrow_container, mLookAroundHomingFragment);
 		
 		transaction.commit();
 	}
@@ -97,22 +98,22 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 
 	@Override
 	public void serverConnected(TcpClient tcpClient) {
-		mSwayingHomingFragment.setNetwork(tcpClient);
+		mLookAroundHomingFragment.setNetwork(tcpClient);
 	}
 
 	@Override
 	public void serverDisconnected() {
-		mSwayingHomingFragment.setNetwork(null);
+		mLookAroundHomingFragment.setNetwork(null);
 	}
 
 	@Override
 	public void serialDisconnected() {
-		mSwayingHomingFragment.setSerial(null);
+		mLookAroundHomingFragment.setSerial(null);
 	}
 
 	@Override
 	public void serialConnected(ArduinoZumoControl roboantControl) {
-		mSwayingHomingFragment.setSerial(roboantControl);
+		mLookAroundHomingFragment.setSerial(roboantControl);
 	}
 
 	@Override
@@ -122,7 +123,7 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 
 	@Override
 	public void cameraViewStarted(int width, int height) {
-		mSwayingHomingFragment.setCamera(mCameraFragment);
+		mLookAroundHomingFragment.setCamera(mCameraFragment);
 	}
 
 	@Override
@@ -144,7 +145,7 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 				Matcher matcher = Constants.mNavigationPattern.matcher(message);
 				
 				if (matcher.find()) {
-					mSwayingHomingFragment.toggleNavigation();
+					mLookAroundHomingFragment.toggleNavigation();
 				}
 			}
 		});
