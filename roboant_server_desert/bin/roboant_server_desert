@@ -263,10 +263,10 @@ def send_tick():
 
     sendWheels(toSendLeftWheelVal, toSendRightWheelVal)
 
-mIP = findMyIP()
-qrFile = open('qrIP.png', 'wb')
-qrcode.make(mIP + ":" + str(SERVER_PORT)).save(qrFile);
-qrFile.close()
+#mIP = findMyIP()
+#qrFile = open('qrIP.png', 'wb')
+#qrcode.make(mIP + ":" + str(SERVER_PORT)).save(qrFile);
+#qrFile.close()
 
 def qrcode_tick():
     if not mProtocol:

@@ -10,5 +10,25 @@
         android:title="@string/calibrate"
         android:showAsAction="ifRoom"
         />
+    <item
+        android:id="@+id/network"
+        android:title="Network"
+        android:showAsAction="ifRoom"
+        />
+    <item
+        android:id="@+id/perfect"
+        android:title="Perfect Memory"
+        android:showAsAction="ifRoom"
+        />
+    <item
+        android:id="@+id/test"
+        android:title="Test"
+        android:showAsAction="ifRoom"
+        />
+    <item
+        android:id="@+id/continuous"
+        android:title="Continuious"
+        android:showAsAction="ifRoom"
+        />
 
 </menu>

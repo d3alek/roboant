@@ -2,12 +2,13 @@ package uk.ac.ed.insectlab.ant.service;
 
 import uk.ac.ed.insectlab.ant.ArduinoZumoControl;
 import uk.ac.ed.insectlab.ant.MainActivity;
+import uk.ac.ed.insectlab.ant.service.BluetoothThread.BluetoothListener;
 import uk.ac.ed.insectlab.ant.service.ClientThread.NetworkListener;
 import uk.ac.ed.insectlab.ant.service.SerialThread.SerialListener;
-import uk.ac.ed.insectlab.ant.service.SerialThread.SerialState;
 import uk.co.ed.insectlab.ant.R;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -18,9 +19,9 @@ import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
-import android.widget.Toast;
 
-public class RoboantService extends Service implements SerialListener, NetworkListener {
+public class RoboantService extends Service implements SerialListener, NetworkListener,
+BluetoothListener {
 	private final IBinder mBinder = new LocalBinder();
 	private SerialThread mSerialThread;
 	private ClientThread mClientThread;
@@ -48,6 +49,16 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		void messageReceived(String message);
 
 	}
+	
+	public interface BluetoothBond {
+
+		void bluetoothConnected(BluetoothThread bluetoothThread);
+
+		void bluetoothDisconnected();
+
+		void bluetoothMessageReceived(String message);
+
+	}
 
 	BroadcastReceiver mUsbDisconnectedReceiver = new BroadcastReceiver() {
 		@Override
@@ -56,6 +67,7 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		}
 	};
 	private boolean mRemoteControl = DEFAULT_REMOTE_CONTROL;
+	private BluetoothThread mBluetoothThread;
 
 	@Override
 	public void onCreate() {
@@ -138,6 +150,8 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 		//			return null;
 		//		}
 
+		private BluetoothBond mBluetoothBond;
+
 		public RoboantService getService() {
 			return RoboantService.this;
 		}
@@ -148,6 +162,13 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 
 		public void bindNetwork(NetworkBond networkBond) {
 			mClientThread.setBond(networkBond);
+		}
+
+		public void bindBluetooth(BluetoothBond bluetoothBond) {
+			mBluetoothBond = bluetoothBond;
+			if (mBluetoothThread != null) {
+				mBluetoothThread.setBound(mBluetoothBond);
+			}
 		}
 
 	}
@@ -180,6 +201,14 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 			mSerialThread.setSpeeds(left, right);
 		}
 	}
+	
+	@Override
+	public void speedReceivedFromBluetooth(int left, int right) {
+		Log.i(TAG, "speed received from bluetooth " + left + " " + right);
+		if (mRemoteControl) {
+			mSerialThread.setSpeeds(left, right);
+		}
+	}
 
 	@Override
 	public void serverConnected() {
@@ -198,4 +227,14 @@ public class RoboantService extends Service implements SerialListener, NetworkLi
 	public void setRemoteControl(boolean remoteControl) {
 		mRemoteControl = remoteControl;
 	}
+	
+	public void startBluetoothThread(BluetoothSocket socket) {
+		mBluetoothThread = new BluetoothThread(socket, this);
+		mBluetoothThread.start();
+	}
+
+	public BluetoothThread getBluetoothThread() {
+		return mBluetoothThread;
+	}
+
 }

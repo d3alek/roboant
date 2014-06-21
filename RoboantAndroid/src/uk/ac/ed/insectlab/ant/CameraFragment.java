@@ -31,6 +31,9 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -45,6 +48,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	private static final int DOWNSAMPLE_RATE = 4;
 
 	protected static final int REQ_SEGMENT_CIRCLE = 1;
+
+	private static final int CENTER_RADIUS = 100;
 
 	private BaseLoaderCallback mLoaderCallback;
 
@@ -105,11 +110,52 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 	private Size mZoomSize;
 
+	private EqType mEqType;
+
+	private boolean mSegmentCenter = true;
+
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		setHasOptionsMenu(true);
+		mEqType = EqType.ADAPT;
 
+	}
+
+	@Override
+	public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+		inflater.inflate(R.menu.camera, menu);
+		super.onCreateOptionsMenu(menu, inflater);
+	}
+
+	enum EqType {
+		Grayscale, HIST, ADAPT
+
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case R.id.adaptive_histogram_eq:
+
+			mEqType = EqType.ADAPT;
+			break;
+		case R.id.histogram_eq:
+
+			mEqType = EqType.HIST;
+			break;
+		case R.id.grayscale:
+
+			mEqType = EqType.Grayscale;
+			break;
+		case R.id.segment_center:
+			mSegmentCenter = !mSegmentCenter;
+			break;
+		default:
+			break;
+		}
+		return super.onOptionsItemSelected(item);
 	}
 
 	@Override
@@ -128,6 +174,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 				switch (status) {
 				case LoaderCallbackInterface.SUCCESS:
 				{
+					System.loadLibrary("adaptive_histogram");
 					Log.i(TAG, "OpenCV loaded successfully");
 					mOpenCvCameraView.enableView();
 				} break;
@@ -261,6 +308,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 			mCircleMat = Mat.zeros(height, width, CvType.CV_8UC4);
 			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), (int)mLens.radius, 
 					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
+			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), CENTER_RADIUS, 
+					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
 		}
 
 		int pixels = GLOBAL.getSettings().getImagePixelsNum();
@@ -281,8 +330,8 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	@Override
 	public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
 		Mat rgba = inputFrame.rgba();
-		
-//		Log.i(TAG, "Size, " + rgba.size().height + " " + rgba.size().width);
+
+		//		Log.i(TAG, "Size, " + rgba.size().height + " " + rgba.size().width);
 
 		if (mSegmenting) {
 			if (!mLensFound) {
@@ -346,8 +395,25 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 				mRgbaCropped = mRgbaMasked.submat(rangeRect);
 				Core.flip(mRgbaCropped.t(), mRgbaCropped, 1);
 				Core.flip(mRgbaCropped, mRgbaCropped, 1);
+				
 
-				Imgproc.resize(mRgbaCropped, mRgbaShrinked, mLensCropSize);
+
+				Mat mRgbaEqualized = new Mat();
+				if (mEqType == EqType.HIST) {
+					Mat mRgbaGray = new Mat();
+					Imgproc.cvtColor(mRgbaCropped, mRgbaGray, Imgproc.COLOR_RGBA2GRAY);
+					Imgproc.equalizeHist(mRgbaGray, mRgbaEqualized);
+				}
+				else if (mEqType == EqType.ADAPT) {
+					nativeAdaptiveHistogram(mRgbaCropped.getNativeObjAddr(), 
+							mRgbaEqualized.getNativeObjAddr());
+				}
+				else {
+					Imgproc.cvtColor(mRgbaCropped, mRgbaEqualized, Imgproc.COLOR_RGBA2GRAY);
+				}
+
+
+				Imgproc.resize(mRgbaEqualized, mRgbaShrinked, mLensCropSize);
 				Imgproc.resize(mRgbaShrinked, mRgbaZoomed, mZoomSize);
 
 				synchronized (mPictureLock) {
@@ -486,5 +552,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	public void fixPixelSize() {
 		mPixelsNumText.setEnabled(false);
 	}
+
+	public native int nativeAdaptiveHistogram(long matAddrRgba, long matAddrAdapted);
 
 }

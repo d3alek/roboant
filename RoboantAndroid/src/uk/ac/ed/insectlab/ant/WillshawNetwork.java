@@ -5,6 +5,7 @@ import java.util.List;
 
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Environment;
 import android.util.Log;
 
 public class WillshawNetwork {
@@ -20,7 +21,7 @@ public class WillshawNetwork {
 	private List<Point> mPixels;
 
 	private boolean[] currentActivation;
-	private int threshold = 300;
+	private int threshold = 250;
 
 	public WillshawNetwork(List<Bitmap> routePictures, List<Point> pixels) {
 
@@ -96,6 +97,21 @@ public class WillshawNetwork {
 			}
 		}
 		return count;
+	}
+	
+	public void checkValid() {
+		Log.i(TAG, Environment.getExternalStorageDirectory().getAbsolutePath());
+//		File file = new File(Environment.getExternalStorageDirectory());
+//		try {
+//			MatFileReader reader = new MatFileReader(file);
+//			Map<String, MLArray> content = reader.getContent();
+//			for (Entry<String, MLArray> entry : content.entrySet()) {
+//				Log.i(TAG, "Entry: " + entry.getKey());
+//				Log.i(TAG, "Contents: " + entry.getValue());
+//			}
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 	}
 
 }

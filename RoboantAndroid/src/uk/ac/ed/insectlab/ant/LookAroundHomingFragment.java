@@ -1,9 +1,11 @@
 package uk.ac.ed.insectlab.ant;
 
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import uk.ac.ed.insectlab.ant.SwayingHomingFragment.NavigationListener;
+import uk.ac.ed.insectlab.ant.service.BluetoothThread;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.app.Fragment;
@@ -42,6 +44,8 @@ public class LookAroundHomingFragment extends Fragment {
 	private View mView;
 	private List<Point> mLensPixels;
 	private TextView mText;
+
+	private WillshawNetwork mWN;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -111,6 +115,9 @@ public class LookAroundHomingFragment extends Fragment {
 	private double mSSDMin;
 
 	private double mSSDMax;
+	private BluetoothThread mBluetoothThread;
+	private boolean mPerfect;
+	private boolean mContinuous;
 
 	public void calibrateSSD() {
 		if (mAIControlTask != null) {
@@ -184,6 +191,8 @@ public class LookAroundHomingFragment extends Fragment {
 
 		private static final int TRAINING_END = 6666;
 
+		private static final long DELAY = 200;
+
 		private ArduinoZumoControl mRoboAntControl;
 
 		String lock = "lock";
@@ -199,7 +208,6 @@ public class LookAroundHomingFragment extends Fragment {
 
 		private CameraFragment mCameraControl;
 
-		private WillshawNetwork mWN;
 
 		public AIControlTask(CameraFragment camControl, NetworkControl networkControl, List<Bitmap> routePictures) {
 			mCameraControl = camControl;
@@ -267,25 +275,36 @@ public class LookAroundHomingFragment extends Fragment {
 		}
 
 		private void lookAroundHoming(WillshawNetwork wn) {
-			int turnSpeed = 100, turnTime = 100;
+			int turnSpeed = 80, turnTime = 200;
 			int maxSteps = 5;
 			Bitmap bmp;
 			int familiarity;
+			int minFamiliarity = 0, minPos;
 			while (true) {
 				if (mStop) {
 					break;
 				}
 				bmp = takePicture();
-				familiarity = wn.process(bmp);
+				familiarity = calcFamiliarity(bmp);
 				publishProgress(0, familiarity);
 				bmp.recycle();
-				for (int step = 0; step < maxSteps; ++step) {
+				if (mContinuous && ((familiarity < minFamiliarity) || (familiarity - minFamiliarity < 2))) {
+					moveForward(150, 250);
+					continue;
+				}
+				minFamiliarity = familiarity;
+				minPos = 0;
+				for (int step = 1; step <= maxSteps; ++step) {
 					mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime);
 					bmp = takePicture();
-					familiarity = wn.process(bmp);
+					familiarity = calcFamiliarity(bmp);
+					if (familiarity < minFamiliarity) {
+						minPos = -step;
+						minFamiliarity = familiarity;
+					}
 					publishProgress(-step, familiarity);
 					try {
-						Thread.sleep(1000);
+						Thread.sleep(DELAY);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -293,20 +312,33 @@ public class LookAroundHomingFragment extends Fragment {
 					bmp.recycle();
 				}
 				mRoboant.turnInPlaceBlocking(turnSpeed, turnTime * maxSteps);
-				for (int step = 0; step < maxSteps; ++step) {
+				for (int step = 1; step <= maxSteps; ++step) {
 					mRoboant.turnInPlaceBlocking(turnSpeed, turnTime);
 					bmp = takePicture();
-					familiarity = wn.process(bmp);
+					familiarity = calcFamiliarity(bmp);
+					if (familiarity < minFamiliarity) {
+						minPos = step;
+						minFamiliarity = familiarity;
+					}
 					publishProgress(step, familiarity);
 					try {
-						Thread.sleep(1000);
+						Thread.sleep(DELAY);
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					bmp.recycle();
 				}
-				mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime * maxSteps);
+				Log.i(TAG, "minPos " + minPos + " minFamiliarity " + minFamiliarity);
+				mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime * (maxSteps - 1));
+				if (minPos < 0) {
+					mRoboant.turnInPlaceBlocking(-turnSpeed, -minPos * turnTime);
+				}
+				else {
+					mRoboant.turnInPlaceBlocking(turnSpeed, minPos * turnTime);
+				}
+
+				moveForward(150, 250);
 			}
 		}
 
@@ -371,6 +403,24 @@ public class LookAroundHomingFragment extends Fragment {
 		//			mRoboAntControl.setSpeeds(0, 0);
 		//		}
 
+		private int calcFamiliarity(Bitmap bmp) {
+			int familiarity;
+			if (mPerfect) {
+				familiarity = 1000000000;
+				int thisFamiliarity;
+				for (Bitmap routePic : mRoutePictures) {
+					thisFamiliarity = (int) Util.imagesSSD(bmp, routePic, mLensPixels);
+					if (thisFamiliarity < familiarity) {
+						familiarity = thisFamiliarity;
+					}
+				}
+			}
+			else {
+				familiarity = mWN.process(bmp);
+			}
+			return familiarity;
+		}
+
 		private void moveForward(int speed, int time) {
 			mRoboAntControl.setSpeeds(speed, speed);
 			try {
@@ -415,6 +465,16 @@ public class LookAroundHomingFragment extends Fragment {
 			mArrow.setImageMatrix(matrix);
 
 			mText.setText(familiarity+"");
+
+			String text = step + " " + familiarity + "\n";
+			try {
+				if (mBluetoothThread != null) {
+					mBluetoothThread.write(text.getBytes("UTF-8"));
+				}
+			} catch (UnsupportedEncodingException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		private Bitmap takePicture() {
@@ -450,6 +510,18 @@ public class LookAroundHomingFragment extends Fragment {
 			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
 			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
 			return true;
+		case R.id.test:
+			mWN.checkValid();
+			return true;
+		case R.id.perfect:
+			mPerfect = true;
+			return true;
+		case R.id.network:
+			mPerfect = false;
+			return true;
+		case R.id.continuous:
+			mContinuous = !mContinuous;
+			return true;
 		}
 		return super.onOptionsItemSelected(item);
 	}
@@ -471,6 +543,21 @@ public class LookAroundHomingFragment extends Fragment {
 		else {
 			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
 			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+		}
+	}
+
+	public void setBluetooth(BluetoothThread bluetoothThread) {
+		mBluetoothThread = bluetoothThread;
+	}
+
+	public void onBluetoothMessageReceived(String message) {
+		if (message.startsWith("AION")) {
+			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
+			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+		}
+		else if (message.startsWith("AIOFF")) {
+			mAIControlTask.stop();
+			mAIControlTask = null;
 		}
 	}
 

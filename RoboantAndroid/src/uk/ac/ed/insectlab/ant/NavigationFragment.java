@@ -25,7 +25,7 @@ import android.widget.Toast;
 
 public class NavigationFragment extends CardFragment {
 
-	private static final long RECORD_EVERY_MS = 100;
+	private static final long RECORD_EVERY_MS = 700;
 	protected static final String TAG = NavigationFragment.class.getSimpleName();
 	private Button mGoButton;
 	private View mRouteInfoView;

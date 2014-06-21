@@ -4,7 +4,9 @@ import java.util.regex.Matcher;
 
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.ac.ed.insectlab.ant.SwayingHomingFragment.NavigationListener;
+import uk.ac.ed.insectlab.ant.service.BluetoothThread;
 import uk.ac.ed.insectlab.ant.service.RoboantService;
+import uk.ac.ed.insectlab.ant.service.RoboantService.BluetoothBond;
 import uk.ac.ed.insectlab.ant.service.RoboantService.LocalBinder;
 import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
 import uk.ac.ed.insectlab.ant.service.RoboantService.SerialBond;
@@ -21,36 +23,39 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.view.View;
+import android.util.Log;
 import android.view.WindowManager;
 
-public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener, NavigationListener{
+public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener,
+NavigationListener, BluetoothBond{
 	private static final String TAG = NavigationActivity.class.getSimpleName();
 	private boolean mBound;
 	private CameraFragment mCameraFragment;
 	private RoboantService mService;
 	Handler mHandler;
 	private LookAroundHomingFragment mLookAroundHomingFragment;
-	
+
+	private BluetoothThread mBluetoothThread;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		
+
 		setContentView(R.layout.activity_navigation);
-		
+
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
-		
+
 		FragmentManager fragmentManager = getFragmentManager();
 		FragmentTransaction transaction = fragmentManager.beginTransaction();
-		
+
 		mCameraFragment = new CameraFragment();
-//		mLookAroundHomingFragment = new SwayingHomingFragment();
+		//		mLookAroundHomingFragment = new SwayingHomingFragment();
 		mLookAroundHomingFragment = new LookAroundHomingFragment();
-		
+
 		transaction.add(R.id.fragment_container, mCameraFragment);
 		transaction.add(R.id.arrow_container, mLookAroundHomingFragment);
-		
+
 		transaction.commit();
 	}
 
@@ -61,7 +66,7 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 		Intent intent = new Intent(this, RoboantService.class);
 		startService(intent);
 		bindService(intent, mConnection, Context.BIND_ABOVE_CLIENT);
-		
+
 		if (GLOBAL.ROUTE != null && GLOBAL.ROUTE.size() > 0) {
 			Bitmap routeSample = GLOBAL.ROUTE.get(0);
 			mCameraFragment.setImagePixelsNum(routeSample.getHeight()*routeSample.getWidth());
@@ -71,12 +76,14 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 
 	private ServiceConnection mConnection = new ServiceConnection() {
 
+
 		@Override
 		public void onServiceConnected(ComponentName className,
 				IBinder service) {
 			LocalBinder binder = (LocalBinder) service;
 			binder.bindSerial(NavigationActivity.this);
 			binder.bindNetwork(NavigationActivity.this);
+			binder.bindBluetooth(NavigationActivity.this);
 			mService = binder.getService();
 			mBound = true;
 		}
@@ -86,7 +93,7 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 			mBound = false;
 		}
 	};
-	
+
 	@Override
 	protected void onStop() {
 		super.onStop();
@@ -128,28 +135,28 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 
 	@Override
 	public void cameraViewStopped() {
-		
+
 	}
 
 	@Override
 	public void onLensFound(boolean b) {
-		
+
 	}
 
 	@Override
 	public void messageReceived(final String message) {
 		mHandler.post(new Runnable() {
-			
+
 			@Override
 			public void run() {
 				Matcher matcher = Constants.mNavigationPattern.matcher(message);
-				
+
 				if (matcher.find()) {
 					mLookAroundHomingFragment.toggleNavigation();
 				}
 			}
 		});
-		
+
 	}
 
 	@Override
@@ -161,4 +168,23 @@ public class NavigationActivity extends Activity implements SerialBond, NetworkB
 	public void onNavigationStopped() {
 		mService.setRemoteControl(true);
 	}
+
+	@Override
+	public void bluetoothConnected(BluetoothThread bluetoothThread) {
+		Log.i(TAG, "bluetoothConnected " + bluetoothThread);
+		mBluetoothThread = bluetoothThread;
+		mLookAroundHomingFragment.setBluetooth(mBluetoothThread);
+	}
+
+	@Override
+	public void bluetoothDisconnected() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void bluetoothMessageReceived(String message) {
+		mLookAroundHomingFragment.onBluetoothMessageReceived(message);
+	}
+
 }
