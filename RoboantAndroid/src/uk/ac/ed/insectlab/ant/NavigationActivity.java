@@ -24,6 +24,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.WindowManager;
 
 public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener,
@@ -186,5 +189,6 @@ NavigationListener, BluetoothBond{
 	public void bluetoothMessageReceived(String message) {
 		mLookAroundHomingFragment.onBluetoothMessageReceived(message);
 	}
+	
 
 }

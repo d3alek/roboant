@@ -19,5 +19,12 @@
         android:layout_height="wrap_content"
         android:textColor="@android:color/white"
         android:textSize="24sp"/>
+    
+    <TextView
+        android:id="@+id/testingText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"/>
 
 </LinearLayout>

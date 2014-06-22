@@ -30,5 +30,16 @@
         android:title="Continuious"
         android:showAsAction="ifRoom"
         />
+    
+    <item
+        android:id="@+id/mental"
+        android:title="Mental"
+        android:showAsAction="ifRoom"
+        />
+    <item
+        android:id="@+id/swaying"
+        android:title="Swaying"
+        android:showAsAction="ifRoom"
+        />
 
 </menu>

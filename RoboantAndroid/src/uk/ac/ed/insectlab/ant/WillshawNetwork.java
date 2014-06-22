@@ -21,9 +21,12 @@ public class WillshawNetwork {
 	private List<Point> mPixels;
 
 	private boolean[] currentActivation;
-	private int threshold = 250;
+//	private int threshold = 250; // kinda works for 625 pixel images
+	public double mMeanSparseness;
+	private int mThreshold;
 
-	public WillshawNetwork(List<Bitmap> routePictures, List<Point> pixels) {
+	public WillshawNetwork(List<Bitmap> routePictures, List<Point> pixels, int threshold) {
+		mThreshold = threshold;
 
 		Bitmap first = routePictures.get(0);
 		M = pixels.size();
@@ -41,7 +44,10 @@ public class WillshawNetwork {
 			activatedSum += train(bmp);
 		}
 		double meanActivatedSum = activatedSum/routePictures.size();
-		Log.i(TAG, "Mean sparseness=" + meanActivatedSum/kc);
+		mMeanSparseness = meanActivatedSum/kc;
+		
+		
+		Log.i(TAG, "Mean sparseness=" + mMeanSparseness);
 	}
 
 	private void connect_generator() {
@@ -84,7 +90,7 @@ public class WillshawNetwork {
 		}
 
 		for (int i = 0; i < kc; ++i) {
-			currentActivation[i] = intensity[i] > threshold;
+			currentActivation[i] = intensity[i] > mThreshold;
 		}
 	}
 

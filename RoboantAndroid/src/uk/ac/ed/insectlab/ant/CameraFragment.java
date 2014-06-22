@@ -49,7 +49,11 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 
 	protected static final int REQ_SEGMENT_CIRCLE = 1;
 
-	private static final int CENTER_RADIUS = 100;
+	private static final int CENTER_RADIUS = 86;
+
+	private static final int LENS_ADJ_X = 7;
+
+	private static final int LENS_ADJ_Y = 6;
 
 	private BaseLoaderCallback mLoaderCallback;
 
@@ -113,6 +117,7 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 	private EqType mEqType;
 
 	private boolean mSegmentCenter = true;
+
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -306,10 +311,15 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 		if (mLensFound) {
 			mSegmenting = true;
 			mCircleMat = Mat.zeros(height, width, CvType.CV_8UC4);
-			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), (int)mLens.radius, 
+			Core.circle(mCircleMat, new Point(mLens.x + LENS_ADJ_X, mLens.y + LENS_ADJ_Y), (int)mLens.radius - 10, 
 					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
-			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), CENTER_RADIUS, 
-					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
+			Log.i(TAG, "lens radius " + mLens.radius);
+			if (mSegmentCenter) {
+				Core.circle(mCircleMat, new Point(mLens.x + LENS_ADJ_X, mLens.y + LENS_ADJ_Y), CENTER_RADIUS, 
+						new Scalar(new double[] {0, 0, 0, 0}), -1);
+			}
+			//			Core.circle(mCircleMat, new Point(mLens.x, mLens.y), 50, 
+			//					new Scalar(new double[] {255.0, 255.0, 255.0, 255.0}), -1);
 		}
 
 		int pixels = GLOBAL.getSettings().getImagePixelsNum();
@@ -390,12 +400,12 @@ public class CameraFragment extends CardFragment implements CvCameraViewListener
 				}
 				Core.bitwise_and(mCircleMat, rgba, mRgbaMasked);
 
-				Rect rangeRect = new Rect(mLens.x - mLens.radius,
-						mLens.y - mLens.radius, mLens.radius*2, mLens.radius*2);
+				Rect rangeRect = new Rect(mLens.x - mLens.radius + LENS_ADJ_X,
+						mLens.y - mLens.radius + LENS_ADJ_Y, mLens.radius*2, mLens.radius*2);
 				mRgbaCropped = mRgbaMasked.submat(rangeRect);
 				Core.flip(mRgbaCropped.t(), mRgbaCropped, 1);
 				Core.flip(mRgbaCropped, mRgbaCropped, 1);
-				
+
 
 
 				Mat mRgbaEqualized = new Mat();
