@@ -306,7 +306,7 @@ public class LookAroundHomingFragment extends Fragment {
 
 			//			int speedAdj = 300;
 			double speedAdj = 2.7;
-			double speedAdjPerfect = 0.00008;
+			double speedAdjPerfect = 0.0001;
 			double speedAdjGradient = 0.0005;
 
 			Bitmap thisPicture;
@@ -481,7 +481,7 @@ public class LookAroundHomingFragment extends Fragment {
 						mRoboant.turnInPlaceBlocking(turnSpeed, minPos * turnTime);
 					}
 
-					moveForward(150, 300);
+					moveForward(150, 400);
 				}
 				else {
 					mTestingRoutePos++;

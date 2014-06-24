@@ -68,6 +68,7 @@ BluetoothListener {
 	};
 	private boolean mRemoteControl = DEFAULT_REMOTE_CONTROL;
 	private BluetoothThread mBluetoothThread;
+	public BluetoothBond mBluetoothBond;
 
 	@Override
 	public void onCreate() {
@@ -150,7 +151,6 @@ BluetoothListener {
 		//			return null;
 		//		}
 
-		private BluetoothBond mBluetoothBond;
 
 		public RoboantService getService() {
 			return RoboantService.this;
@@ -231,6 +231,9 @@ BluetoothListener {
 	public void startBluetoothThread(BluetoothSocket socket) {
 		mBluetoothThread = new BluetoothThread(socket, this);
 		mBluetoothThread.start();
+		if (mBluetoothBond != null) {
+			mBluetoothThread.setBound(mBluetoothBond);
+		}
 	}
 
 	public BluetoothThread getBluetoothThread() {

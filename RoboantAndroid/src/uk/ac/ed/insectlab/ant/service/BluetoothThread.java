@@ -1,9 +1,13 @@
 package uk.ac.ed.insectlab.ant.service;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 
 import uk.ac.ed.insectlab.ant.service.RoboantService.BluetoothBond;
 import android.bluetooth.BluetoothSocket;
@@ -12,7 +16,7 @@ import android.util.Log;
 public class BluetoothThread extends Thread {
 	private static final String TAG = "BluetoothThread";
 	private final BluetoothSocket mmSocket;
-	private final InputStream mmInStream;
+	private final BufferedReader mmInStream;
 	private final OutputStream mmOutStream;
 	private BluetoothListener mListener;
 	private BluetoothBond mBond;
@@ -39,7 +43,7 @@ public class BluetoothThread extends Thread {
 			tmpOut = socket.getOutputStream();
 		} catch (IOException e) { }
 
-		mmInStream = tmpIn;
+		mmInStream = new BufferedReader(new InputStreamReader(tmpIn));
 		mmOutStream = tmpOut;
 	}
 
@@ -51,33 +55,29 @@ public class BluetoothThread extends Thread {
 		while (true) {
 			try {
 				// Read from the InputStream
-				bytes = mmInStream.read(buffer);
+				String line = mmInStream.readLine();
 				// Send the obtained bytes to the UI activity
 				//                mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
 				//                        .sendToTarget();
-				processBytes(buffer);
+				processBytes(line);
 			} catch (IOException e) {
 				break;
 			}
 		}
 	}
 
-	private void processBytes(byte[] buffer) {
-		try {
-			String text = new String(buffer, "UTF-8");
-			String[] speeds = text.split("\\s");
-			try {
-				int speedL = Integer.parseInt(speeds[0]);
-				int speedR = Integer.parseInt(speeds[1]);
-				mListener.speedReceivedFromBluetooth(speedL,
-						speedR);
-			} catch(NumberFormatException e) {
-				if (mBond != null)  {
-					mBond.bluetoothMessageReceived(text);
-				}
-			}
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+	private void processBytes(String line) {
+		String[] speeds = line.split("\\s");
+		Log.i("BluetootThread", "line: " + line);
+		char first = line.charAt(0);
+		if ('0' <= first && first <= '9') {
+			int speedL = Integer.parseInt(speeds[0]);
+			int speedR = Integer.parseInt(speeds[1]);
+			mListener.speedReceivedFromBluetooth(speedL,
+					speedR);
+		}
+		else if (mBond != null)  {
+			mBond.bluetoothMessageReceived(line);
 		}
 	}
 
