@@ -29,13 +29,11 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 	private EditText mServerIP;
 	private EditText mServerPort;
 
-
-
 	interface NetworkFragmentListener {
 
 		void freeCamera(Handler mHandler, int messageCameraFree);
 
-		void recordMessageReceived(boolean torecord);
+		boolean recordMessageReceived(boolean torecord);
 
 		void navigationMessageReceived();
 
@@ -48,10 +46,11 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 	public void onAttach(Activity activity) {
 		super.onAttach(activity);
 		try {
-			mNetworkListener = (NetworkFragmentListener)activity;
-		} catch(ClassCastException e) {
+			mNetworkListener = (NetworkFragmentListener) activity;
+		} catch (ClassCastException e) {
 			e.printStackTrace();
-			throw new RuntimeException("Host activity does not implement listener");
+			throw new RuntimeException(
+					"Host activity does not implement listener");
 		}
 	}
 
@@ -63,24 +62,27 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 			public boolean handleMessage(Message msg) {
 				switch (msg.what) {
 				case MESSAGE_CAMERA_FREE:
-					IntentIntegrator integrator = new IntentIntegrator(NetworkFragment.this);
+					IntentIntegrator integrator = new IntentIntegrator(
+							NetworkFragment.this);
 					integrator.initiateScan();
 					break;
-				default: Log.i(TAG, "Unhandled message " + msg);
+				default:
+					Log.i(TAG, "Unhandled message " + msg);
 				}
 
 				return false;
 			}
-		}); 
+		});
 	}
 
 	@Override
 	public View onCreateCardView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
-		View view = inflater.inflate(R.layout.fragment_network, container, false);
+		View view = inflater.inflate(R.layout.fragment_network, container,
+				false);
 
-		mServerIP = (EditText)view.findViewById(R.id.serverIP);
-		mServerPort = (EditText)view.findViewById(R.id.serverPort);
+		mServerIP = (EditText) view.findViewById(R.id.serverIP);
+		mServerPort = (EditText) view.findViewById(R.id.serverPort);
 
 		mServerIP.setText(GLOBAL.getSettings().getServerIP());
 		mServerPort.setText(GLOBAL.getSettings().getServerPort() + "");
@@ -88,7 +90,8 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		mServerIP.addTextChangedListener(new TextWatcher() {
 
 			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
+			public void onTextChanged(CharSequence s, int start, int before,
+					int count) {
 				// TODO Auto-generated method stub
 
 			}
@@ -102,14 +105,16 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 
 			@Override
 			public void afterTextChanged(Editable s) {
-				GLOBAL.getSettings().setServerAddress(s.toString(), Integer.parseInt(mServerPort.getText().toString()));
+				GLOBAL.getSettings().setServerAddress(s.toString(),
+						Integer.parseInt(mServerPort.getText().toString()));
 			}
 		});
 
 		mServerPort.addTextChangedListener(new TextWatcher() {
 
 			@Override
-			public void onTextChanged(CharSequence s, int start, int before, int count) {
+			public void onTextChanged(CharSequence s, int start, int before,
+					int count) {
 				// TODO Auto-generated method stub
 
 			}
@@ -123,11 +128,13 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 
 			@Override
 			public void afterTextChanged(Editable s) {
-				GLOBAL.getSettings().setServerAddress(mServerIP.getText().toString(), Integer.parseInt(s.toString()));
+				GLOBAL.getSettings().setServerAddress(
+						mServerIP.getText().toString(),
+						Integer.parseInt(s.toString()));
 			}
 		});
 
-		Button scanQR = (Button)view.findViewById(R.id.btn_scan_qr);
+		Button scanQR = (Button) view.findViewById(R.id.btn_scan_qr);
 		scanQR.setOnClickListener(new View.OnClickListener() {
 
 			@Override
@@ -141,9 +148,9 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		return view;
 	}
 
-
 	public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-		IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+		IntentResult scanResult = IntentIntegrator.parseActivityResult(
+				requestCode, resultCode, intent);
 		if (scanResult != null) {
 			String serverAddr = scanResult.getContents();
 			if (serverAddr == null) {
@@ -152,9 +159,9 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 			String[] ipPort = serverAddr.split(":");
 			mServerIP.setText(ipPort[0]);
 			mServerPort.setText(ipPort[1]);
-			GLOBAL.getSettings().setServerAddress(ipPort[0], Integer.parseInt(ipPort[1]));
-		}
-		else {
+			GLOBAL.getSettings().setServerAddress(ipPort[0],
+					Integer.parseInt(ipPort[1]));
+		} else {
 			super.onActivityResult(requestCode, resultCode, intent);
 		}
 	}
@@ -171,8 +178,6 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		setStatus(CardStatus.LOADING);
 	}
 
-
-
 	@Override
 	public void messageReceived(final String message) {
 		Matcher matcher = Constants.mRecordPattern.matcher(message);
@@ -180,12 +185,10 @@ public class NetworkFragment extends CardFragment implements NetworkBond {
 		if (matcher.find()) {
 			if (matcher.group(1).equals("on")) {
 				mNetworkListener.recordMessageReceived(true);
-			}
-			else {
+			} else {
 				mNetworkListener.recordMessageReceived(false);
 			}
-		}
-		else {
+		} else {
 			matcher = Constants.mNavigationPattern.matcher(message);
 			if (matcher.find()) {
 				mNetworkListener.navigationMessageReceived();

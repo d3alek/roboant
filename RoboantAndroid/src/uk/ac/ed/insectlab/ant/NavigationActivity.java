@@ -1,12 +1,13 @@
 package uk.ac.ed.insectlab.ant;
 
+import static uk.ac.ed.insectlab.ant.bluetooth.Mode.NAVIGATION_MODE;
+
 import java.util.regex.Matcher;
 
+import uk.ac.ed.insectlab.ant.BluetoothFragment.BluetoothFragmentListener;
 import uk.ac.ed.insectlab.ant.CameraFragment.CameraListener;
 import uk.ac.ed.insectlab.ant.SwayingHomingFragment.NavigationListener;
-import uk.ac.ed.insectlab.ant.service.BluetoothThread;
 import uk.ac.ed.insectlab.ant.service.RoboantService;
-import uk.ac.ed.insectlab.ant.service.RoboantService.BluetoothBond;
 import uk.ac.ed.insectlab.ant.service.RoboantService.LocalBinder;
 import uk.ac.ed.insectlab.ant.service.RoboantService.NetworkBond;
 import uk.ac.ed.insectlab.ant.service.RoboantService.SerialBond;
@@ -15,6 +16,7 @@ import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
+import android.bluetooth.BluetoothSocket;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -23,14 +25,11 @@ import android.graphics.Bitmap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.WindowManager;
 
-public class NavigationActivity extends Activity implements SerialBond, NetworkBond, CameraListener,
-NavigationListener, BluetoothBond{
+public class NavigationActivity extends Activity implements SerialBond,
+		NetworkBond, CameraListener, NavigationListener,
+		BluetoothFragmentListener {
 	private static final String TAG = NavigationActivity.class.getSimpleName();
 	private boolean mBound;
 	private CameraFragment mCameraFragment;
@@ -38,7 +37,7 @@ NavigationListener, BluetoothBond{
 	Handler mHandler;
 	private LookAroundHomingFragment mLookAroundHomingFragment;
 
-	private BluetoothThread mBluetoothThread;
+	private BluetoothFragment mBluetoothFragment;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -47,16 +46,19 @@ NavigationListener, BluetoothBond{
 		setContentView(R.layout.activity_navigation);
 
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-		getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+		getWindow().setSoftInputMode(
+				WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
 
 		FragmentManager fragmentManager = getFragmentManager();
 		FragmentTransaction transaction = fragmentManager.beginTransaction();
 
 		mCameraFragment = new CameraFragment();
-		//		mLookAroundHomingFragment = new SwayingHomingFragment();
+		// mLookAroundHomingFragment = new SwayingHomingFragment();
 		mLookAroundHomingFragment = new LookAroundHomingFragment();
-
+		mBluetoothFragment = new BluetoothFragment();
+		mBluetoothFragment.setMode(NAVIGATION_MODE);
 		transaction.add(R.id.fragment_container, mCameraFragment);
+		transaction.add(R.id.fragment_container, mBluetoothFragment);
 		transaction.add(R.id.arrow_container, mLookAroundHomingFragment);
 
 		transaction.commit();
@@ -72,21 +74,20 @@ NavigationListener, BluetoothBond{
 
 		if (GLOBAL.ROUTE != null && GLOBAL.ROUTE.size() > 0) {
 			Bitmap routeSample = GLOBAL.ROUTE.get(0);
-			mCameraFragment.setImagePixelsNum(routeSample.getHeight()*routeSample.getWidth());
+			mCameraFragment.setImagePixelsNum(routeSample.getHeight()
+					* routeSample.getWidth());
 			mCameraFragment.fixPixelSize();
 		}
 	}
 
 	private ServiceConnection mConnection = new ServiceConnection() {
 
-
 		@Override
-		public void onServiceConnected(ComponentName className,
-				IBinder service) {
+		public void onServiceConnected(ComponentName className, IBinder service) {
 			LocalBinder binder = (LocalBinder) service;
 			binder.bindSerial(NavigationActivity.this);
 			binder.bindNetwork(NavigationActivity.this);
-			binder.bindBluetooth(NavigationActivity.this);
+			binder.bindBluetooth(mBluetoothFragment);
 			mService = binder.getService();
 			mBound = true;
 		}
@@ -104,7 +105,6 @@ NavigationListener, BluetoothBond{
 			unbindService(mConnection);
 		}
 	}
-
 
 	@Override
 	public void serverConnected(TcpClient tcpClient) {
@@ -173,22 +173,64 @@ NavigationListener, BluetoothBond{
 	}
 
 	@Override
-	public void bluetoothConnected(BluetoothThread bluetoothThread) {
-		Log.i(TAG, "bluetoothConnected " + bluetoothThread);
-		mBluetoothThread = bluetoothThread;
-		mLookAroundHomingFragment.setBluetooth(mBluetoothThread);
+	public void startBluetoothThread(BluetoothSocket socket, String deviceName) {
+		mService.startBluetoothThread(socket, deviceName);
 	}
 
 	@Override
-	public void bluetoothDisconnected() {
-		// TODO Auto-generated method stub
-		
+	public boolean changeRecordStateFromBluetooth(boolean b) {
+		return false;
 	}
 
 	@Override
-	public void bluetoothMessageReceived(String message) {
-		mLookAroundHomingFragment.onBluetoothMessageReceived(message);
+	public boolean changeNavigateStateFromBluetooth(final boolean navigate) {
+		if (mLookAroundHomingFragment.getIsNavigating() != navigate) {
+
+			runOnUiThread(new Runnable() {
+
+				@Override
+				public void run() {
+					if (navigate) {
+						mLookAroundHomingFragment.startNavigate();
+					} else {
+						mLookAroundHomingFragment.stopNavigate();
+					}
+				}
+			});
+			return true;
+		}
+		return false;
+
 	}
-	
+
+	@Override
+	public boolean changeToNavigationModeFromBluetooth(boolean b) {
+		return false;
+	}
+
+	@Override
+	public boolean changeToRecordingModeFromBluetooth(boolean b) {
+		finish();
+		return true;
+	}
 
 }
+
+// @Override
+// public void bluetoothConnected(BluetoothThread bluetoothThread) {
+// Log.i(TAG, "bluetoothConnected " + bluetoothThread);
+// mBluetoothThread = bluetoothThread;
+// mLookAroundHomingFragment.setBluetooth(mBluetoothThread);
+// }
+//
+// @Override
+// public void bluetoothDisconnected() {
+// // TODO Auto-generated method stub
+//
+// }
+//
+// @Override
+// public void bluetoothMessageReceived(String message) {
+// mLookAroundHomingFragment.onBluetoothMessageReceived(message);
+// }
+

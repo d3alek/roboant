@@ -22,11 +22,11 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-
 public class NavigationFragment extends CardFragment {
 
 	private static final long RECORD_EVERY_MS = 700;
-	protected static final String TAG = NavigationFragment.class.getSimpleName();
+	protected static final String TAG = NavigationFragment.class
+			.getSimpleName();
 	private Button mGoButton;
 	private View mRouteInfoView;
 	private Button mSelectRouteButton;
@@ -39,7 +39,7 @@ public class NavigationFragment extends CardFragment {
 	private boolean mToStopRecording;
 	private Button mStopRecording;
 	private WakeLock mWakeLock;
-	
+
 	@Override
 	public void onStart() {
 		super.onStart();
@@ -49,8 +49,9 @@ public class NavigationFragment extends CardFragment {
 	@Override
 	public View onCreateCardView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
-		View v = inflater.inflate(R.layout.fragment_navigation, container, false);
-		mSelectRouteButton = (Button)v.findViewById(R.id.btn_select_route);
+		View v = inflater.inflate(R.layout.fragment_navigation, container,
+				false);
+		mSelectRouteButton = (Button) v.findViewById(R.id.btn_select_route);
 		mSelectRouteButton.setOnClickListener(new View.OnClickListener() {
 
 			@Override
@@ -59,7 +60,7 @@ public class NavigationFragment extends CardFragment {
 			}
 		});
 
-		mClearRouteButton = (Button)v.findViewById(R.id.btn_clear_route);
+		mClearRouteButton = (Button) v.findViewById(R.id.btn_clear_route);
 
 		mClearRouteButton.setOnClickListener(new View.OnClickListener() {
 
@@ -73,7 +74,7 @@ public class NavigationFragment extends CardFragment {
 		});
 
 		mRouteInfoView = v.findViewById(R.id.route_info);
-		mGoButton = (Button)v.findViewById(R.id.btn_go);
+		mGoButton = (Button) v.findViewById(R.id.btn_go);
 
 		mGoButton.setOnClickListener(new View.OnClickListener() {
 
@@ -84,7 +85,7 @@ public class NavigationFragment extends CardFragment {
 			}
 		});
 
-		mStopRecording = (Button)v.findViewById(R.id.btn_stop_recording);
+		mStopRecording = (Button) v.findViewById(R.id.btn_stop_recording);
 
 		mStopRecording.setOnClickListener(new View.OnClickListener() {
 
@@ -96,14 +97,14 @@ public class NavigationFragment extends CardFragment {
 
 		mStopRecording.setVisibility(View.GONE);
 
-		mRouteLength = (TextView)v.findViewById(R.id.route_length);
+		mRouteLength = (TextView) v.findViewById(R.id.route_length);
 
 		mGoButton.setVisibility(View.GONE);
 		mRouteInfoView.setVisibility(View.GONE);
 		setLabel("Navigation");
 		return v;
 	}
-	
+
 	@Override
 	public void onPause() {
 		super.onPause();
@@ -140,11 +141,13 @@ public class NavigationFragment extends CardFragment {
 		mRouteInfoView.setVisibility(View.GONE);
 		mStopRecording.setVisibility(View.VISIBLE);
 		mSelectRouteButton.setVisibility(View.GONE);
-		
-		final PowerManager pm = (PowerManager) getActivity().getSystemService(Context.POWER_SERVICE);
-        this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK, "recording route");
-        this.mWakeLock.acquire();
-		
+
+		final PowerManager pm = (PowerManager) getActivity().getSystemService(
+				Context.POWER_SERVICE);
+		this.mWakeLock = pm.newWakeLock(PowerManager.SCREEN_DIM_WAKE_LOCK,
+				"recording route");
+		this.mWakeLock.acquire();
+
 		mHandler.postDelayed(new Runnable() {
 			@Override
 			public void run() {
@@ -155,7 +158,8 @@ public class NavigationFragment extends CardFragment {
 						return;
 					}
 					mRouteRecordingPictures.add(mCamera.getPicture());
-					Log.i(TAG, mRouteRecordingPictures.size() + " route pictures taken");
+					Log.i(TAG, mRouteRecordingPictures.size()
+							+ " route pictures taken");
 					mHandler.postDelayed(this, RECORD_EVERY_MS);
 				}
 			}
@@ -170,38 +174,42 @@ public class NavigationFragment extends CardFragment {
 				mStopRecording.setVisibility(View.GONE);
 				this.mWakeLock.release();
 				onRouteSelected(mRouteRecordingPictures);
-				new SaveRecordedRouteTask(getActivity()).execute(mRouteRecordingPictures);
+				new SaveRecordedRouteTask(getActivity())
+						.execute(mRouteRecordingPictures);
 			}
 		}
 	}
 
-	public void beginNavigationMostRecentRoute() {
+	public boolean beginNavigationMostRecentRoute() {
 		if (GLOBAL.ROUTE == null) {
 			String filePath = GLOBAL.getSettings().getMostRecentRouteDirPath();
 			if (filePath == null) {
-				Toast.makeText(getActivity(), "No route selected recently", Toast.LENGTH_SHORT).show();
-				return;
+				Toast.makeText(getActivity(), "No route selected recently",
+						Toast.LENGTH_SHORT).show();
+				return false;
 			}
 			RouteSelectionDialogFragment.RouteSelectedListener listener = new RouteSelectionDialogFragment.RouteSelectedListener() {
-				
+
 				@Override
 				public void onRouteSelected(List<Bitmap> bitmap) {
 					GLOBAL.ROUTE = bitmap;
-					Intent i = new Intent(getActivity(), NavigationActivity.class);
+					Intent i = new Intent(getActivity(),
+							NavigationActivity.class);
 					startActivity(i);
 				}
-				
+
 				@Override
 				public void onRecordRoute() {
 					// TODO Auto-generated method stub
-					
+
 				}
 			};
 			new LoadRecordedRouteTask(listener).execute(filePath);
-			return;
+			return true;
 		}
 		Intent i = new Intent(getActivity(), NavigationActivity.class);
 		startActivity(i);
+		return true;
 	}
 
 }

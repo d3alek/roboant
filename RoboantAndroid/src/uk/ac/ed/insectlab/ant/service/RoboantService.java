@@ -20,8 +20,8 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.TaskStackBuilder;
 import android.util.Log;
 
-public class RoboantService extends Service implements SerialListener, NetworkListener,
-BluetoothListener {
+public class RoboantService extends Service implements SerialListener,
+		NetworkListener, BluetoothListener {
 	private final IBinder mBinder = new LocalBinder();
 	private SerialThread mSerialThread;
 	private ClientThread mClientThread;
@@ -49,7 +49,7 @@ BluetoothListener {
 		void messageReceived(String message);
 
 	}
-	
+
 	public interface BluetoothBond {
 
 		void bluetoothConnected(BluetoothThread bluetoothThread);
@@ -77,7 +77,8 @@ BluetoothListener {
 		mSerialThread = new SerialThread(this);
 		mClientThread = new ClientThread(this);
 
-		Log.i(TAG, "Roboant service thread is " + Thread.currentThread().getName());
+		Log.i(TAG, "Roboant service thread is "
+				+ Thread.currentThread().getName());
 		mSerialThread.start();
 		mClientThread.start();
 
@@ -85,14 +86,12 @@ BluetoothListener {
 	}
 
 	private void updateNotification() {
-		NotificationCompat.Builder mBuilder =
-				new NotificationCompat.Builder(this)
-		.setSmallIcon(R.drawable.ic_ant)
-		.setContentTitle("Roboant")
-		.setContentText("Client and serial service");
+		NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
+				this).setSmallIcon(R.drawable.ic_ant)
+				.setContentTitle("Roboant")
+				.setContentText("Client and serial service");
 
-		NotificationCompat.InboxStyle inboxStyle = 
-				new NotificationCompat.InboxStyle();
+		NotificationCompat.InboxStyle inboxStyle = new NotificationCompat.InboxStyle();
 
 		inboxStyle.setBigContentTitle("Roboant");
 
@@ -100,7 +99,8 @@ BluetoothListener {
 
 		Intent dismissIntent = new Intent(this, RoboantService.class);
 		dismissIntent.setAction(ACTION_DISMISS);
-		PendingIntent piDismiss = PendingIntent.getService(this, 0, dismissIntent, 0);
+		PendingIntent piDismiss = PendingIntent.getService(this, 0,
+				dismissIntent, 0);
 		mBuilder.addAction(android.R.drawable.ic_delete, "Terminate", piDismiss);
 
 		inboxStyle.addLine(mSerialThread.getDescription());
@@ -111,11 +111,8 @@ BluetoothListener {
 		TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
 		stackBuilder.addParentStack(MainActivity.class);
 		stackBuilder.addNextIntent(resultIntent);
-		PendingIntent resultPendingIntent =
-				stackBuilder.getPendingIntent(
-						0,
-						PendingIntent.FLAG_UPDATE_CURRENT
-						);
+		PendingIntent resultPendingIntent = stackBuilder.getPendingIntent(0,
+				PendingIntent.FLAG_UPDATE_CURRENT);
 		mBuilder.setContentIntent(resultPendingIntent);
 		startForeground(NOTIFICATION_ID, mBuilder.build());
 	}
@@ -125,8 +122,7 @@ BluetoothListener {
 		if (intent != null) {
 			String action = intent.getAction();
 			if (action == null) {
-			}
-			else if (action.equals(ACTION_DISMISS)) {
+			} else if (action.equals(ACTION_DISMISS)) {
 				mSerialThread.setRunning(false);
 				mClientThread.setRunning(false);
 				stopSelf();
@@ -142,15 +138,14 @@ BluetoothListener {
 	}
 
 	public class LocalBinder extends Binder {
-		//		public ArduinoZumoControl getRoboantControl() {
-		//			if (mSerialThread.getSerialState() == SerialState.CONNECTED) {
-		//				return SerialThread.getRoboAntControl();
-		//			}
+		// public ArduinoZumoControl getRoboantControl() {
+		// if (mSerialThread.getSerialState() == SerialState.CONNECTED) {
+		// return SerialThread.getRoboAntControl();
+		// }
 		//
-		//			Log.e(TAG, "getRoboantControl null");
-		//			return null;
-		//		}
-
+		// Log.e(TAG, "getRoboantControl null");
+		// return null;
+		// }
 
 		public RoboantService getService() {
 			return RoboantService.this;
@@ -182,7 +177,8 @@ BluetoothListener {
 	@Override
 	public void onSerialConnected() {
 		Log.i(TAG, "onSerialConnected");
-		IntentFilter intentFilter = new IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED);
+		IntentFilter intentFilter = new IntentFilter(
+				UsbManager.ACTION_USB_DEVICE_DETACHED);
 		registerReceiver(mUsbDisconnectedReceiver, intentFilter);
 		updateNotification();
 	}
@@ -201,9 +197,10 @@ BluetoothListener {
 			mSerialThread.setSpeeds(left, right);
 		}
 	}
-	
+
 	@Override
 	public void speedReceivedFromBluetooth(int left, int right) {
+
 		Log.i(TAG, "speed received from bluetooth " + left + " " + right);
 		if (mRemoteControl) {
 			mSerialThread.setSpeeds(left, right);
@@ -227,9 +224,9 @@ BluetoothListener {
 	public void setRemoteControl(boolean remoteControl) {
 		mRemoteControl = remoteControl;
 	}
-	
-	public void startBluetoothThread(BluetoothSocket socket) {
-		mBluetoothThread = new BluetoothThread(socket, this);
+
+	public void startBluetoothThread(BluetoothSocket socket, String deviceName) {
+		mBluetoothThread = new BluetoothThread(socket, this, deviceName);
 		mBluetoothThread.start();
 		if (mBluetoothBond != null) {
 			mBluetoothThread.setBound(mBluetoothBond);
@@ -238,6 +235,11 @@ BluetoothListener {
 
 	public BluetoothThread getBluetoothThread() {
 		return mBluetoothThread;
+	}
+
+	@Override
+	public void bluetoothDisconnected() {
+		mBluetoothThread = null;
 	}
 
 }

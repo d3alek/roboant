@@ -24,13 +24,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.Toast;
 import android.widget.ImageView.ScaleType;
 import android.widget.TextView;
+import android.widget.Toast;
 
 public class LookAroundHomingFragment extends Fragment {
 
-	protected static final String TAG = LookAroundHomingFragment.class.getSimpleName();
+	protected static final String TAG = LookAroundHomingFragment.class
+			.getSimpleName();
 	private ImageView mArrow;
 	private NetworkControl mNetwork;
 	private ArduinoZumoControl mRoboant;
@@ -43,7 +44,7 @@ public class LookAroundHomingFragment extends Fragment {
 	private boolean mCameraSet;
 
 	private boolean mSwaying;
-	//	private View mView;
+	// private View mView;
 
 	private volatile NavigationListener mListener;
 	private View mView;
@@ -64,7 +65,7 @@ public class LookAroundHomingFragment extends Fragment {
 	public void onAttach(Activity activity) {
 		Log.i(TAG, "onAttach");
 		try {
-			mListener = (NavigationListener)activity;
+			mListener = (NavigationListener) activity;
 			Log.i(TAG, "mListener added " + mListener);
 		} catch (ClassCastException e) {
 			new RuntimeException("Parent activity does not implement listener");
@@ -75,7 +76,8 @@ public class LookAroundHomingFragment extends Fragment {
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
-		View v = inflater.inflate(R.layout.fragment_swaying_homing, container, false);
+		View v = inflater.inflate(R.layout.fragment_swaying_homing, container,
+				false);
 
 		mArrow = (ImageView) v.findViewById(R.id.arrow);
 		mText = (TextView) v.findViewById(R.id.text);
@@ -116,7 +118,6 @@ public class LookAroundHomingFragment extends Fragment {
 
 	private long mLastTimeChanged;
 
-
 	private boolean mSSDCalibrated;
 
 	private double mSSDMin;
@@ -154,7 +155,6 @@ public class LookAroundHomingFragment extends Fragment {
 
 		mHandler.postDelayed(new Runnable() {
 
-
 			@Override
 			public void run() {
 				Bitmap bmp = mCamera.getPicture();
@@ -173,12 +173,12 @@ public class LookAroundHomingFragment extends Fragment {
 				if (changed) {
 					mLastTimeChanged = System.currentTimeMillis();
 					Log.i(TAG, "Changed");
-				}
-				else {
+				} else {
 					if (System.currentTimeMillis() - mLastTimeChanged > 4000) {
 						Log.i(TAG, "Changed not");
 						// do not post this callback again
-						GLOBAL.getSettings().setSSDCalibrationResults(true, mCalibrateSSDMin, mCalibrateSSDMAX);
+						GLOBAL.getSettings().setSSDCalibrationResults(true,
+								mCalibrateSSDMin, mCalibrateSSDMAX);
 						mSSDCalibrated = true;
 						mSSDMin = mCalibrateSSDMin;
 						mSSDMax = mCalibrateSSDMAX;
@@ -194,7 +194,8 @@ public class LookAroundHomingFragment extends Fragment {
 
 	}
 
-	private class AIControlTask extends AsyncTask<ArduinoZumoControl, Integer, Void> {
+	private class AIControlTask extends
+			AsyncTask<ArduinoZumoControl, Integer, Void> {
 		protected static final String TAG = "AIControlTask";
 
 		private static final int TRAINING_START = 555;
@@ -215,14 +216,12 @@ public class LookAroundHomingFragment extends Fragment {
 
 		private NetworkControl mNetworkControl;
 
-
 		private Semaphore mMinCalcMutex;
 
 		private CameraFragment mCameraControl;
 
-
-
-		public AIControlTask(CameraFragment camControl, NetworkControl networkControl, List<Bitmap> routePictures) {
+		public AIControlTask(CameraFragment camControl,
+				NetworkControl networkControl, List<Bitmap> routePictures) {
 			mCameraControl = camControl;
 			mRoutePictures = routePictures;
 			mNetworkControl = networkControl;
@@ -233,7 +232,6 @@ public class LookAroundHomingFragment extends Fragment {
 		public void setNetworkControl(NetworkControl control) {
 			mNetworkControl = control;
 		}
-
 
 		@Override
 		protected void onPreExecute() {
@@ -255,7 +253,6 @@ public class LookAroundHomingFragment extends Fragment {
 			super.onPreExecute();
 		}
 
-
 		@Override
 		protected Void doInBackground(ArduinoZumoControl... params) {
 			Log.i(TAG, "doInBackground");
@@ -266,8 +263,7 @@ public class LookAroundHomingFragment extends Fragment {
 				}
 				if (!mTesting) {
 					mLensPixels = Util.getLensPixels(mCamera.getPicture());
-				}
-				else {
+				} else {
 					mLensPixels = Util.getLensPixels(mRoutePictures.get(0));
 				}
 			}
@@ -290,21 +286,20 @@ public class LookAroundHomingFragment extends Fragment {
 				}
 				if (mSwaying) {
 					swayingHoming(mRoutePictures);
-				}
-				else {
+				} else {
 					lookAroundHoming(mWN);
 				}
 			}
 		}
 
 		private void swayingHoming(List<Bitmap> routePics) {
-			int dir = 1; //right
+			int dir = 1; // right
 			double minDist;
 			double thisDist;
 			double prevDist = 0;
 			int rotateSpeed;
 
-			//			int speedAdj = 300;
+			// int speedAdj = 300;
 			double speedAdj = 2.7;
 			double speedAdjPerfect = 0.0001;
 			double speedAdjGradient = 0.0005;
@@ -321,42 +316,27 @@ public class LookAroundHomingFragment extends Fragment {
 				thisPicture = takePicture();
 
 				minDist = calcFamiliarity(thisPicture, true);
-				//				for (int i = 0; i < routePics.size(); ++i) {
-				//					if (GRADIENT) {
-				//						thisDist = calcFamiliarity(routePics.get(i));
-				//					}
-				//					else {
-				////						thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax, mLensPixels);
-				//					}
-				//					if (thisDist < minDist) {
-				//						minDist = thisDist;
-				//					}
-				//				}
-				//				
 				if (GRADIENT) {
 					if (prevDist != 0) {
-						rotateSpeed = (int)(speedAdjGradient * (minDist - prevDist));
+						rotateSpeed = (int) (speedAdjGradient * (minDist - prevDist));
 						Log.i(TAG, "rotateSpeed " + rotateSpeed);
-					}
-					else {
+					} else {
 						rotateSpeed = 0;
 					}
 					prevDist = minDist;
-				}
-				else {
+				} else {
 					if (mPerfect) {
 
-						rotateSpeed = (int)(speedAdjPerfect * minDist);
-					}
-					else {
-						rotateSpeed = (int)(speedAdj * minDist);
+						rotateSpeed = (int) (speedAdjPerfect * minDist);
+					} else {
+						rotateSpeed = (int) (speedAdj * minDist);
 					}
 				}
 
-				publishProgress(dir, (int)rotateSpeed);
+				publishProgress(dir, (int) rotateSpeed);
 
 				if (Math.abs(rotateSpeed) > 40) {
-					mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
+					mRoboAntControl.turnInPlaceBlocking(dir * rotateSpeed, 300);
 				}
 
 				dir = -dir;
@@ -380,17 +360,18 @@ public class LookAroundHomingFragment extends Fragment {
 				if (mStop) {
 					break;
 				}
-				if (!mTesting) { 
+				if (!mTesting) {
 					bmp = takePicture();
 					firstBmp = bmp;
-				}
-				else {
+				} else {
 					bmp = mRoutePictures.get(mTestingRoutePos);
 				}
 				familiarity = calcFamiliarity(bmp);
 				publishProgress(0, familiarity);
 				if (!mTesting) {
-					if (mContinuous && ((familiarity < minFamiliarity) || (familiarity - minFamiliarity < 2))) {
+					if (mContinuous
+							&& ((familiarity < minFamiliarity) || (familiarity
+									- minFamiliarity < 2))) {
 						moveForward(150, 250);
 						continue;
 					}
@@ -404,15 +385,14 @@ public class LookAroundHomingFragment extends Fragment {
 					if (mStop) {
 						break;
 					}
-					if (!mTesting && !mMental) { 
+					if (!mTesting && !mMental) {
 						mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime);
 						bmp = takePicture();
-					}
-					else if (mMental) {
+					} else if (mMental) {
 						bmp = rotate(-step, firstBmp);
-					}
-					else {
-						bmp = rotate(-step, mRoutePictures.get(mTestingRoutePos));
+					} else {
+						bmp = rotate(-step,
+								mRoutePictures.get(mTestingRoutePos));
 					}
 					familiarity = calcFamiliarity(bmp);
 					if (familiarity < minFamiliarity) {
@@ -423,12 +403,10 @@ public class LookAroundHomingFragment extends Fragment {
 					try {
 						if (mMental) {
 							Thread.sleep(MENTAL_DELAY);
-						}
-						else {
+						} else {
 							Thread.sleep(DELAY);
 						}
 					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 					bmp.recycle();
@@ -440,15 +418,14 @@ public class LookAroundHomingFragment extends Fragment {
 					if (mStop) {
 						break;
 					}
-					if (!mTesting && !mMental) { 
+					if (!mTesting && !mMental) {
 						mRoboant.turnInPlaceBlocking(turnSpeed, turnTime);
 						bmp = takePicture();
-					}
-					else if (mMental) {
+					} else if (mMental) {
 						bmp = rotate(step, firstBmp);
-					}
-					else {
-						bmp = rotate(-step, mRoutePictures.get(mTestingRoutePos));
+					} else {
+						bmp = rotate(-step,
+								mRoutePictures.get(mTestingRoutePos));
 					}
 					familiarity = calcFamiliarity(bmp);
 					if (familiarity < minFamiliarity) {
@@ -459,8 +436,7 @@ public class LookAroundHomingFragment extends Fragment {
 					try {
 						if (mMental) {
 							Thread.sleep(MENTAL_DELAY);
-						}
-						else {
+						} else {
 							Thread.sleep(DELAY);
 						}
 					} catch (InterruptedException e) {
@@ -469,21 +445,23 @@ public class LookAroundHomingFragment extends Fragment {
 					}
 					bmp.recycle();
 				}
-				Log.i(TAG, "minPos " + minPos + " minFamiliarity " + minFamiliarity);
+				Log.i(TAG, "minPos " + minPos + " minFamiliarity "
+						+ minFamiliarity);
 				if (!mTesting) {
 					if (!mMental) {
-						mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime * (maxSteps - 1));
+						mRoboant.turnInPlaceBlocking(-turnSpeed, turnTime
+								* (maxSteps - 1));
 					}
 					if (minPos < 0) {
-						mRoboant.turnInPlaceBlocking(-turnSpeed, -minPos * turnTime);
-					}
-					else {
-						mRoboant.turnInPlaceBlocking(turnSpeed, minPos * turnTime);
+						mRoboant.turnInPlaceBlocking(-turnSpeed, -minPos
+								* turnTime);
+					} else {
+						mRoboant.turnInPlaceBlocking(turnSpeed, minPos
+								* turnTime);
 					}
 
 					moveForward(150, 400);
-				}
-				else {
+				} else {
 					mTestingRoutePos++;
 					if (mTestingRoutePos >= mRoutePictures.size()) {
 						mTesting = false;
@@ -494,72 +472,76 @@ public class LookAroundHomingFragment extends Fragment {
 			}
 		}
 
-		//		private void swayingHoming(List<Bitmap> routePics) {
-		//			int dir = 1; //right
-		//			double minDist;
-		//			double thisDist;
-		//			double prevDist = 0;
-		//			int rotateSpeed;
+		// private void swayingHoming(List<Bitmap> routePics) {
+		// int dir = 1; //right
+		// double minDist;
+		// double thisDist;
+		// double prevDist = 0;
+		// int rotateSpeed;
 		//
-		//			int speedAdj = 300;
-		//			double speedAdjGradient = 0.0005;
+		// int speedAdj = 300;
+		// double speedAdjGradient = 0.0005;
 		//
-		//			Bitmap thisPicture;
-		//			
-		//			boolean GRADIENT = true;
+		// Bitmap thisPicture;
 		//
-		//			while (true) {
-		//				if (mStop) {
-		//					break;
-		//				}
+		// boolean GRADIENT = true;
 		//
-		//				thisPicture = takePicture();
-		//				minDist = Double.MAX_VALUE;
+		// while (true) {
+		// if (mStop) {
+		// break;
+		// }
 		//
-		//				for (int i = 0; i < routePics.size(); ++i) {
-		//					if (GRADIENT) {
-		//						thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mLensPixels);
-		//					}
-		//					else {
-		//						thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin, mSSDMax, mLensPixels);
-		//					}
-		//					if (thisDist < minDist) {
-		//						minDist = thisDist;
-		//					}
-		//				}
-		//				
-		//				if (GRADIENT) {
-		//					if (prevDist != 0) {
-		//						rotateSpeed = (int)(speedAdjGradient * (minDist - prevDist));
-		//						Log.i(TAG, "rotateSpeed " + rotateSpeed);
-		//					}
-		//					else {
-		//						rotateSpeed = 0;
-		//					}
-		//					prevDist = minDist;
-		//				}
-		//				else {
-		//					rotateSpeed = (int)(speedAdj * minDist);
-		//				}
+		// thisPicture = takePicture();
+		// minDist = Double.MAX_VALUE;
 		//
-		//				publishProgress((float)(dir*rotateSpeed));
+		// for (int i = 0; i < routePics.size(); ++i) {
+		// if (GRADIENT) {
+		// thisDist = Util.imagesSSD(routePics.get(i), thisPicture,
+		// mLensPixels);
+		// }
+		// else {
+		// thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin,
+		// mSSDMax, mLensPixels);
+		// }
+		// if (thisDist < minDist) {
+		// minDist = thisDist;
+		// }
+		// }
 		//
-		//				if (Math.abs(rotateSpeed) > 40) {
-		//					mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
-		//				}
+		// if (GRADIENT) {
+		// if (prevDist != 0) {
+		// rotateSpeed = (int)(speedAdjGradient * (minDist - prevDist));
+		// Log.i(TAG, "rotateSpeed " + rotateSpeed);
+		// }
+		// else {
+		// rotateSpeed = 0;
+		// }
+		// prevDist = minDist;
+		// }
+		// else {
+		// rotateSpeed = (int)(speedAdj * minDist);
+		// }
 		//
-		////				dir = -dir;
+		// publishProgress((float)(dir*rotateSpeed));
 		//
-		//				moveForward(80, 200);
-		//			}
-		//			mRoboAntControl.setSpeeds(0, 0);
-		//		}
+		// if (Math.abs(rotateSpeed) > 40) {
+		// mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
+		// }
+		//
+		// // dir = -dir;
+		//
+		// moveForward(80, 200);
+		// }
+		// mRoboAntControl.setSpeeds(0, 0);
+		// }
 
 		private Bitmap rotate(int step, Bitmap bitmap) {
-			Bitmap targetBitmap = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), bitmap.getConfig());
+			Bitmap targetBitmap = Bitmap.createBitmap(bitmap.getWidth(),
+					bitmap.getHeight(), bitmap.getConfig());
 			Canvas canvas = new Canvas(targetBitmap);
 			Matrix matrix = new Matrix();
-			matrix.setRotate(-step * 10, bitmap.getWidth()/2, bitmap.getHeight()/2);
+			matrix.setRotate(-step * 10, bitmap.getWidth() / 2,
+					bitmap.getHeight() / 2);
 			canvas.drawBitmap(bitmap, matrix, new Paint());
 			return targetBitmap;
 		}
@@ -567,6 +549,7 @@ public class LookAroundHomingFragment extends Fragment {
 		private int calcFamiliarity(Bitmap bmp) {
 			return calcFamiliarity(bmp, false);
 		}
+
 		private int calcFamiliarity(Bitmap bmp, boolean thresh) {
 			int familiarity;
 			int count = 0;
@@ -577,23 +560,23 @@ public class LookAroundHomingFragment extends Fragment {
 					if (mTesting) {
 						if (count == mTestingRoutePos) {
 							continue;
-						}
-						else {
+						} else {
 							count++;
 						}
 					}
-					//					if (thresh) {
-					//						thisFamiliarity = (int) Util.imagesSSD(bmp, routePic, mSSDMin, mSSDMax, mLensPixels);
-					//					}
-					//					else {
-					thisFamiliarity = (int) Util.imagesSSD(bmp, routePic, mLensPixels);
-					//					}
+					// if (thresh) {
+					// thisFamiliarity = (int) Util.imagesSSD(bmp, routePic,
+					// mSSDMin, mSSDMax, mLensPixels);
+					// }
+					// else {
+					thisFamiliarity = (int) Util.imagesSSD(bmp, routePic,
+							mLensPixels);
+					// }
 					if (thisFamiliarity < familiarity) {
 						familiarity = thisFamiliarity;
 					}
 				}
-			}
-			else {
+			} else {
 				familiarity = mWN.process(bmp);
 			}
 			return familiarity;
@@ -612,13 +595,12 @@ public class LookAroundHomingFragment extends Fragment {
 		@Override
 		protected void onPostExecute(Void result) {
 			Log.i(TAG, "onPostExecute");
-			//			mView.setVisibility(View.INVISIBLE);
+			// mView.setVisibility(View.INVISIBLE);
 			getActivity().getActionBar().show();
 			mView.setVisibility(View.INVISIBLE);
 			mListener.onNavigationStopped();
 			super.onPostExecute(result);
 		}
-
 
 		@Override
 		protected void onProgressUpdate(Integer... progress) {
@@ -630,20 +612,23 @@ public class LookAroundHomingFragment extends Fragment {
 			}
 			if (progress[0] == TRAINING_END) {
 				mText.setText("TRAINING FINISHED");
-				Toast.makeText(getActivity(), "Mean sparseness " + mWN.mMeanSparseness, Toast.LENGTH_SHORT).show();
+				Toast.makeText(getActivity(),
+						"Mean sparseness " + mWN.mMeanSparseness,
+						Toast.LENGTH_SHORT).show();
 				return;
 			}
 
-			Matrix matrix=new Matrix();
+			Matrix matrix = new Matrix();
 
 			int step = progress[0];
 			int familiarity = progress[1];
 
 			mArrow.setScaleType(ScaleType.MATRIX);
-			matrix.postRotate(step*10, mArrow.getWidth()/2, mArrow.getHeight()/2);
+			matrix.postRotate(step * 10, mArrow.getWidth() / 2,
+					mArrow.getHeight() / 2);
 			mArrow.setImageMatrix(matrix);
 
-			mText.setText(familiarity+"");
+			mText.setText(familiarity + "");
 			mTestingText.setText(mTestingRoutePos + "");
 
 			String text = step + " " + familiarity + "\n";
@@ -689,13 +674,15 @@ public class LookAroundHomingFragment extends Fragment {
 			return true;
 		case R.id.navigate:
 			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
-			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
+					mRoboant);
 			return true;
 		case R.id.test:
 			mTesting = !mTesting;
 			mTestingRoutePos = 0;
 			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
-			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
+					mRoboant);
 			return true;
 		case R.id.perfect:
 			mPerfect = true;
@@ -705,14 +692,16 @@ public class LookAroundHomingFragment extends Fragment {
 			return true;
 		case R.id.mental:
 			mMental = !mMental;
-			Toast.makeText(getActivity(), "Mental " + mMental, Toast.LENGTH_SHORT).show();
+			Toast.makeText(getActivity(), "Mental " + mMental,
+					Toast.LENGTH_SHORT).show();
 			return true;
 		case R.id.continuous:
 			mContinuous = !mContinuous;
 			return true;
 		case R.id.swaying:
 			mSwaying = !mSwaying;
-			Toast.makeText(getActivity(), "Swaying " + mSwaying, Toast.LENGTH_SHORT).show();
+			Toast.makeText(getActivity(), "Swaying " + mSwaying,
+					Toast.LENGTH_SHORT).show();
 			return true;
 		}
 		return super.onOptionsItemSelected(item);
@@ -728,32 +717,39 @@ public class LookAroundHomingFragment extends Fragment {
 	}
 
 	public void toggleNavigation() {
+		if (!startNavigate()) {
+			stopNavigate();
+		}
+
+	}
+
+	public boolean startNavigate() {
+		if (mAIControlTask != null) {
+			return false;
+		}
+		mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
+		mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,
+				mRoboant);
+		return true;
+	}
+
+	public boolean stopNavigate() {
 		if (mAIControlTask != null) {
 			mAIControlTask.stop();
 			mAIControlTask = null;
+			return true;
 		}
-		else {
-			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
-			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
-		}
+		return false;
 	}
 
 	public void setBluetooth(BluetoothThread bluetoothThread) {
 		mBluetoothThread = bluetoothThread;
 	}
 
-	public void onBluetoothMessageReceived(String message) {
-		if (message.startsWith("AION")) {
-			mAIControlTask = new AIControlTask(mCamera, mNetwork, mRoute);
-			mAIControlTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, mRoboant);
+	public boolean getIsNavigating() {
+		if (mAIControlTask == null) {
+			return false;
 		}
-		else if (message.startsWith("AIOFF")) {
-			mAIControlTask.stop();
-			mAIControlTask = null;
-		}
+		return true;
 	}
-
-
-
-
 }
