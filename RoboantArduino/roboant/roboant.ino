@@ -34,6 +34,7 @@ void loop() {
       }
       buf[buflength++] = (char) Serial.read();
     } while (Serial.peek() != -1);
+    process_buf();
   }
 }
 
