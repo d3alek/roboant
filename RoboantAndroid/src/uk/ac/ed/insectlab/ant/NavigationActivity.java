@@ -56,7 +56,8 @@ public class NavigationActivity extends Activity implements SerialBond,
 		// mLookAroundHomingFragment = new SwayingHomingFragment();
 		mLookAroundHomingFragment = new LookAroundHomingFragment();
 		mBluetoothFragment = new BluetoothFragment();
-		mBluetoothFragment.setMode(NAVIGATION_MODE);
+		mBluetoothFragment.setMode(NAVIGATION_MODE,
+				mLookAroundHomingFragment.getSwayingSpeedAdj());
 		transaction.add(R.id.fragment_container, mCameraFragment);
 		transaction.add(R.id.fragment_container, mBluetoothFragment);
 		transaction.add(R.id.arrow_container, mLookAroundHomingFragment);
@@ -211,6 +212,37 @@ public class NavigationActivity extends Activity implements SerialBond,
 	@Override
 	public boolean changeToRecordingModeFromBluetooth(boolean b) {
 		finish();
+		return true;
+	}
+
+	@Override
+	public boolean setSwayingParametera(final float value) {
+		if (mLookAroundHomingFragment == null) {
+			return false;
+		}
+		runOnUiThread(new Runnable() {
+
+			@Override
+			public void run() {
+				mLookAroundHomingFragment.setSpeedAdj(value);
+			}
+		});
+		return true;
+	}
+
+	@Override
+	public boolean setSwayingState(boolean flag) {
+		if (mLookAroundHomingFragment.getSwaying() == flag) {
+			return false;
+		}
+		runOnUiThread(new Runnable() {
+
+			@Override
+			public void run() {
+				mLookAroundHomingFragment.toggleSwaying();
+			}
+		});
+
 		return true;
 	}
 

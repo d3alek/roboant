@@ -7,11 +7,15 @@ import static uk.ac.ed.insectlab.ant.CardFragment.CardStatus.ERROR;
 import static uk.ac.ed.insectlab.ant.CardFragment.CardStatus.LOADING;
 import static uk.ac.ed.insectlab.ant.CardFragment.CardStatus.NONE;
 import static uk.ac.ed.insectlab.ant.CardFragment.CardStatus.OK;
+import static uk.ac.ed.insectlab.ant.bluetooth.BluetoothAction.SWAYING_PARAMETER;
+import static uk.ac.ed.insectlab.ant.bluetooth.BluetoothAction.encodeDouble;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import uk.ac.ed.insectlab.ant.PairedDeviceChooserDialog.BluetoothDeviceChosenListener;
 import uk.ac.ed.insectlab.ant.bluetooth.BluetoothAction;
@@ -53,6 +57,10 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 
 		boolean changeToRecordingModeFromBluetooth(boolean b);
 
+		boolean setSwayingParametera(float value);
+
+		boolean setSwayingState(boolean flag);
+
 	}
 
 	private static final int REQUEST_ENABLE_BT = 0;
@@ -71,6 +79,10 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 	private BluetoothConnectThread mBluetoothConnectThread;
 
 	private Mode mMode;
+
+	Pattern doublePattern = Pattern.compile("d(\\d?.\\d+)bl");
+
+	private double mSwayingParameter;
 
 	@Override
 	public void onAttach(Activity activity) {
@@ -153,7 +165,7 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 	public void bluetoothConnected(BluetoothThread bluetoothThread) {
 		disableWithText("Connected to " + bluetoothThread.getDeviceName());
 		mBluetoothThread = bluetoothThread;
-		sendModeMessage(mMode);
+		sendModeMessage(mMode, mSwayingParameter);
 	}
 
 	@Override
@@ -180,6 +192,7 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 			});
 			return;
 		}
+		float floatValue = -1;
 		switch (action) {
 		case RECORDON:
 		case RECORDOFF:
@@ -198,6 +211,20 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 			result = mListener.changeNavigateStateFromBluetooth(action
 					.getFlag());
 			break;
+		case SWAYING_PARAMETER:
+			Matcher doubleMatcher = doublePattern.matcher(message);
+			if (!doubleMatcher.find()) {
+				result = false;
+			} else {
+				floatValue = Float.parseFloat(doubleMatcher.group(1));
+				result = mListener.setSwayingParametera(floatValue);
+			}
+			break;
+		case SWAYINGON:
+		case SWAYINGOFF:
+			result = mListener.setSwayingState(action.getFlag());
+			break;
+
 		default:
 			Log.i(TAG, "Unrecognized action: " + action);
 			mHandler.post(new Runnable() {
@@ -223,7 +250,17 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 			});
 
 		}
-		sendResultMessage(action.name(), result);
+		if (action.equals(BluetoothAction.SWAYING_PARAMETER)) {
+			sendResultMessageWithDouble(action.name(), result, floatValue);
+		} else {
+			sendResultMessage(action.name(), result);
+		}
+	}
+
+	private void sendResultMessageWithDouble(String string, boolean result,
+			double doubleValue) {
+		mBluetoothThread.write(getMessageBytes("RESULT\t" + string + "\t"
+				+ result + "\t" + encodeDouble(doubleValue)));
 	}
 
 	private void sendResultMessage(String string, boolean result) {
@@ -231,9 +268,26 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 				+ result));
 	}
 
-	private void sendModeMessage(Mode mode) {
+	private void sendModeMessage(Mode mode, final double parameter) {
 		if (mode != null) {
 			mBluetoothThread.write(getMessageBytes("MODE\t" + mode.name()));
+			if (mode.equals(Mode.NAVIGATION_MODE)) {
+				mHandler.post(new Runnable() {
+
+					@Override
+					public void run() {
+						Toast.makeText(
+								getActivity(),
+								"Parameter is "
+										+ BluetoothAction.DECIMAL_FORMAT
+												.format(parameter),
+								LENGTH_SHORT).show();
+					}
+				});
+				sendResultMessageWithDouble(SWAYING_PARAMETER.name(), true,
+						parameter);
+
+			}
 		} else {
 			Toast.makeText(getActivity(), "Mode is null", LENGTH_SHORT).show();
 		}
@@ -336,8 +390,9 @@ public class BluetoothFragment extends CardFragment implements BluetoothBond,
 		}
 	}
 
-	public void setMode(Mode mode) {
+	public void setMode(Mode mode, double swayingParameter) {
 		mMode = mode;
+		mSwayingParameter = swayingParameter;
 	}
 
 }

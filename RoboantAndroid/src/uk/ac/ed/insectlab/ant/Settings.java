@@ -3,7 +3,6 @@ package uk.ac.ed.insectlab.ant;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.widget.EditText;
 
 public class Settings {
 
@@ -18,6 +17,7 @@ public class Settings {
 	private static final String KEY_SERVER_PORT = "server_port";
 	private static final String KEY_IMAGE_PIXELS_NUM = "image_pixels";
 	private static final String KEY_MOST_RECENT_ROUTE_FILE_PATH = "route_path";
+	private static final String KEY_SWAYING_SPEED_ADJ = "swaying_speed_adj";
 	private SharedPreferences mPrefs;
 
 	public Settings(Context context) {
@@ -30,9 +30,8 @@ public class Settings {
 
 	public Lens loadLens() {
 		if (mPrefs.getInt(KEY_LENS_RAD, -1) != -1) {
-			return new Lens(mPrefs.getInt(KEY_LENS_X, 0),
-					mPrefs.getInt(KEY_LENS_Y, 0),
-					mPrefs.getInt(KEY_LENS_RAD, 0));
+			return new Lens(mPrefs.getInt(KEY_LENS_X, 0), mPrefs.getInt(
+					KEY_LENS_Y, 0), mPrefs.getInt(KEY_LENS_RAD, 0));
 		}
 		return null;
 	}
@@ -48,21 +47,22 @@ public class Settings {
 	public double getSSDMin() {
 		return mPrefs.getFloat(KEY_SSD_MIN, 0);
 	}
-	
+
 	public double getSSDMax() {
 		return mPrefs.getFloat(KEY_SSD_MAX, 0);
 	}
-	
+
 	public boolean getSSDCalibrated() {
 		return mPrefs.getBoolean(KEY_SSD_CALIBRATED, false);
 	}
-	
-	public void setSSDCalibrationResults(boolean calibrated, double min, double max) {
-		Editor e  = mPrefs.edit();
+
+	public void setSSDCalibrationResults(boolean calibrated, double min,
+			double max) {
+		Editor e = mPrefs.edit();
 		e.putBoolean(KEY_SSD_CALIBRATED, calibrated);
 		if (calibrated) {
-			e.putFloat(KEY_SSD_MIN, (float)min);
-			e.putFloat(KEY_SSD_MAX, (float)max);
+			e.putFloat(KEY_SSD_MIN, (float) min);
+			e.putFloat(KEY_SSD_MAX, (float) max);
 		}
 		e.apply();
 	}
@@ -73,11 +73,11 @@ public class Settings {
 		e.putInt(KEY_SERVER_PORT, port);
 		e.apply();
 	}
-	
+
 	public String getServerIP() {
 		return mPrefs.getString(KEY_SERVER_IP, "not set");
 	}
-	
+
 	public int getServerPort() {
 		return mPrefs.getInt(KEY_SERVER_PORT, 0);
 	}
@@ -102,4 +102,14 @@ public class Settings {
 		e.apply();
 	}
 
+	public float getSwayingSpeedAdj() {
+		return mPrefs.getFloat(KEY_SWAYING_SPEED_ADJ, 0.001f);
+
+	}
+
+	public void setSwayingSpeedAdj(float value) {
+		Editor e = mPrefs.edit();
+		e.putFloat(KEY_SWAYING_SPEED_ADJ, value);
+		e.apply();
+	}
 }

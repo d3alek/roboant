@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import uk.ac.ed.insectlab.ant.SwayingHomingFragment.NavigationListener;
+import uk.ac.ed.insectlab.ant.bluetooth.InputDoubleDialog;
+import uk.ac.ed.insectlab.ant.bluetooth.InputDoubleListener;
 import uk.ac.ed.insectlab.ant.service.BluetoothThread;
 import uk.co.ed.insectlab.ant.R;
 import android.app.Activity;
@@ -28,7 +30,8 @@ import android.widget.ImageView.ScaleType;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class LookAroundHomingFragment extends Fragment {
+public class LookAroundHomingFragment extends Fragment implements
+		InputDoubleListener {
 
 	protected static final String TAG = LookAroundHomingFragment.class
 			.getSimpleName();
@@ -43,7 +46,7 @@ public class LookAroundHomingFragment extends Fragment {
 	private boolean mSerialSet;
 	private boolean mCameraSet;
 
-	private boolean mSwaying;
+	private boolean mSwaying = true;
 	// private View mView;
 
 	private volatile NavigationListener mListener;
@@ -124,11 +127,12 @@ public class LookAroundHomingFragment extends Fragment {
 
 	private double mSSDMax;
 	private BluetoothThread mBluetoothThread;
-	private boolean mPerfect;
+	private boolean mPerfect = true;
 	private boolean mContinuous;
 	private boolean mTesting;
 	private int mTestingRoutePos;
 	private boolean mMental;
+	private double mSwayingSpeedAdj;
 
 	public void calibrateSSD() {
 		if (mAIControlTask != null) {
@@ -295,19 +299,11 @@ public class LookAroundHomingFragment extends Fragment {
 		private void swayingHoming(List<Bitmap> routePics) {
 			int dir = 1; // right
 			double minDist;
-			double thisDist;
-			double prevDist = 0;
 			int rotateSpeed;
-
-			// int speedAdj = 300;
-			double speedAdj = 2.7;
-			double speedAdjPerfect = 0.0001;
-			double speedAdjGradient = 0.0005;
 
 			Bitmap thisPicture;
 
-			boolean GRADIENT = false;
-
+			mSwayingSpeedAdj = getSwayingSpeedAdj();
 			while (true) {
 				if (mStop) {
 					break;
@@ -316,22 +312,7 @@ public class LookAroundHomingFragment extends Fragment {
 				thisPicture = takePicture();
 
 				minDist = calcFamiliarity(thisPicture, true);
-				if (GRADIENT) {
-					if (prevDist != 0) {
-						rotateSpeed = (int) (speedAdjGradient * (minDist - prevDist));
-						Log.i(TAG, "rotateSpeed " + rotateSpeed);
-					} else {
-						rotateSpeed = 0;
-					}
-					prevDist = minDist;
-				} else {
-					if (mPerfect) {
-
-						rotateSpeed = (int) (speedAdjPerfect * minDist);
-					} else {
-						rotateSpeed = (int) (speedAdj * minDist);
-					}
-				}
+				rotateSpeed = (int) (mSwayingSpeedAdj * minDist);
 
 				publishProgress(dir, (int) rotateSpeed);
 
@@ -471,69 +452,6 @@ public class LookAroundHomingFragment extends Fragment {
 				}
 			}
 		}
-
-		// private void swayingHoming(List<Bitmap> routePics) {
-		// int dir = 1; //right
-		// double minDist;
-		// double thisDist;
-		// double prevDist = 0;
-		// int rotateSpeed;
-		//
-		// int speedAdj = 300;
-		// double speedAdjGradient = 0.0005;
-		//
-		// Bitmap thisPicture;
-		//
-		// boolean GRADIENT = true;
-		//
-		// while (true) {
-		// if (mStop) {
-		// break;
-		// }
-		//
-		// thisPicture = takePicture();
-		// minDist = Double.MAX_VALUE;
-		//
-		// for (int i = 0; i < routePics.size(); ++i) {
-		// if (GRADIENT) {
-		// thisDist = Util.imagesSSD(routePics.get(i), thisPicture,
-		// mLensPixels);
-		// }
-		// else {
-		// thisDist = Util.imagesSSD(routePics.get(i), thisPicture, mSSDMin,
-		// mSSDMax, mLensPixels);
-		// }
-		// if (thisDist < minDist) {
-		// minDist = thisDist;
-		// }
-		// }
-		//
-		// if (GRADIENT) {
-		// if (prevDist != 0) {
-		// rotateSpeed = (int)(speedAdjGradient * (minDist - prevDist));
-		// Log.i(TAG, "rotateSpeed " + rotateSpeed);
-		// }
-		// else {
-		// rotateSpeed = 0;
-		// }
-		// prevDist = minDist;
-		// }
-		// else {
-		// rotateSpeed = (int)(speedAdj * minDist);
-		// }
-		//
-		// publishProgress((float)(dir*rotateSpeed));
-		//
-		// if (Math.abs(rotateSpeed) > 40) {
-		// mRoboAntControl.turnInPlaceBlocking(dir*rotateSpeed, 300);
-		// }
-		//
-		// // dir = -dir;
-		//
-		// moveForward(80, 200);
-		// }
-		// mRoboAntControl.setSpeeds(0, 0);
-		// }
 
 		private Bitmap rotate(int step, Bitmap bitmap) {
 			Bitmap targetBitmap = Bitmap.createBitmap(bitmap.getWidth(),
@@ -703,6 +621,11 @@ public class LookAroundHomingFragment extends Fragment {
 			Toast.makeText(getActivity(), "Swaying " + mSwaying,
 					Toast.LENGTH_SHORT).show();
 			return true;
+		case R.id.swaying_parameter:
+			InputDoubleDialog.create(getSwayingSpeedAdj(),
+					LookAroundHomingFragment.this).show(getFragmentManager(),
+					"INPUT_DOUBLE_DIALOG");
+			;
 		}
 		return super.onOptionsItemSelected(item);
 	}
@@ -751,5 +674,33 @@ public class LookAroundHomingFragment extends Fragment {
 			return false;
 		}
 		return true;
+	}
+
+	// bluetooth control
+	public boolean getSwaying() {
+		return mSwaying;
+	}
+
+	public boolean toggleSwaying() {
+		mSwaying = !mSwaying;
+		Toast.makeText(getActivity(), "Swaying " + mSwaying, Toast.LENGTH_SHORT)
+				.show();
+		return mSwaying;
+	}
+
+	public float getSwayingSpeedAdj() {
+		return GLOBAL.getSettings().getSwayingSpeedAdj();
+	}
+
+	public void setSpeedAdj(float value) {
+		GLOBAL.getSettings().setSwayingSpeedAdj(value);
+		mSwayingSpeedAdj = value;
+		Toast.makeText(getActivity(), "SwayingSpeedAdj " + mSwayingSpeedAdj,
+				Toast.LENGTH_SHORT).show();
+	}
+
+	@Override
+	public void doubleEntered(float entered) {
+		setSpeedAdj(entered);
 	}
 }

@@ -69,7 +69,7 @@ public class MainActivity extends Activity implements NetworkFragmentListener,
 		mSerialFragment = new SerialFragment();
 		mCameraFragment = new CameraFragment();
 		mBluetoothFragment = new BluetoothFragment();
-		mBluetoothFragment.setMode(RECORDING_MODE);
+		mBluetoothFragment.setMode(RECORDING_MODE, -1);
 
 		// TODO: remove
 		onSerialConnected();
@@ -278,6 +278,16 @@ public class MainActivity extends Activity implements NetworkFragmentListener,
 
 	@Override
 	public boolean changeToRecordingModeFromBluetooth(boolean b) {
+		return false;
+	}
+
+	@Override
+	public boolean setSwayingParametera(float value) {
+		return false;
+	}
+
+	@Override
+	public boolean setSwayingState(boolean flag) {
 		return false;
 	}
 }

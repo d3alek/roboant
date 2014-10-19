@@ -41,5 +41,10 @@
         android:title="Swaying"
         android:showAsAction="ifRoom"
         />
+    <item
+        android:id="@+id/swaying_parameter"
+        android:title="Swaying parameter"
+        android:showAsAction="ifRoom"
+        />
 
 </menu>
