@@ -1,6 +1,7 @@
 package uk.ac.ed.insectlab.ant;
 
 import static android.widget.Toast.LENGTH_SHORT;
+import com.crashlytics.android.Crashlytics;
 import static uk.ac.ed.insectlab.ant.bluetooth.Mode.RECORDING_MODE;
 
 import java.util.List;
@@ -52,6 +53,7 @@ public class MainActivity extends Activity implements NetworkFragmentListener,
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Crashlytics.start(this);
 		setContentView(R.layout.activity_main);
 
 		getWindow().setSoftInputMode(

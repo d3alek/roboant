@@ -75,6 +75,7 @@
             android:screenOrientation="portrait"
             android:theme="@android:style/Theme.Holo.Light" >
         </activity>
+        <meta-data android:name="com.crashlytics.ApiKey" android:value="182be8768d69459d465997aa6fbe61684c12127f"/>
     </application>
 
 </manifest>
