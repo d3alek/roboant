@@ -10,6 +10,7 @@
 
 # generated files
 RoboantAndroid/bin/
+RoboantBluetoothConnection/bin/
 gen/
 
 # Ignore gradle files
